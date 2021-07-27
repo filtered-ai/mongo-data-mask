@@ -7,17 +7,47 @@ import (
 
 	"github.com/JRagone/mongo-data-gen/generators"
 	"github.com/brianvoe/gofakeit/v6"
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
+
+type CustomCareerLanding struct {
+	HeaderTitle string `bson:"headerTitle"`
+	MainTitle   string `bson:"mainTitle"`
+	SubTitle    string `bson:"subTitle"`
+}
+
+type Organization struct {
+	Id                  int32               `bson:"_id"`
+	IsClosed            bool                `bson:"isClosed"`
+	Name                string              `bson:"name"`
+	Location            string              `bson:"location"`
+	LogoURL             string              `bson:"logoURL"`
+	Domain              string              `bson:"domain"`
+	DomainWhiteList     []string            `bson:"domainWhiteList"`
+	Size                string              `bson:"size"`
+	Team                string              `bson:"team"`
+	Industry            string              `bson:"industry"`
+	IsSuperOrg          bool                `bson:"isSuperOrg"`
+	IsSubOrg            bool                `bson:"isSubOrg"`
+	ShowComment         bool                `bson:"showComment"`
+	DisableCommentBox   bool                `bson:"disableCommentBox"`
+	IsIVBranded         bool                `bson:"isIVBranded"`
+	BrandColor          string              `bson:"brandColor"`
+	BrandBGImage        string              `bson:"brandBGImage"`
+	CustomCareerLanding CustomCareerLanding `bson:"customCareerLanding"`
+	Creator             int32               `bson:"creator"`
+	SubOrgs             []int32             `bson:"subOrgs,omitempty"`
+	Subscription        primitive.ObjectID  `bson:"subscription"`
+}
 
 type preGen struct {
 	isSuperOrg bool
 	isSubOrg   bool
 }
 
-var orgSizes = []string{"1-100", "101-200", "201-1000", "1001-2000", "2001-4000", "4001+"}
-var teams = []string{"Product", "Recruiting", "Sales", "Hiring team"}
+var orgSizes = [...]string{"1-100", "101-200", "201-1000", "1001-2000", "2001-4000", "4001+"}
+var teams = [...]string{"Product", "Recruiting", "Sales", "Hiring team"}
 
 // Generates `length` random domains
 func genDomainWhiteList(length uint) []string {
@@ -58,14 +88,47 @@ func genSubOrgs(base generators.Base, subOrgs []int32) []int32 {
 	return selectedSubOrgs
 }
 
+// Generates a random header title
+func genHeaderTitle() string {
+	return gofakeit.Word() + " " + gofakeit.Word() + " " + gofakeit.Word()
+}
+
+// Generates a random main title
+func genMainTitle() string {
+	const openingTags = "<h3 class=\"text-color-1B2B50\"><b>"
+	const closingTags = "</b></h3>"
+	return openingTags + gofakeit.HackerPhrase() + closingTags
+}
+
+// Generates a random subtitle
+func genSubtitle() string {
+	const openingTags = "<h6>"
+	const closingTags = "</h6>"
+	return openingTags + gofakeit.HackerPhrase() + closingTags
+}
+
+// Generates a random creator, which is a reference Id to a user
+func genCreator(users *[]User) int32 {
+	// Return a random user
+	index := rand.Intn(len(*users))
+	return (*users)[index].Id
+}
+
+// Generates a random subscription, which is a reference
+func genSubscription(subs *[]Subscription) primitive.ObjectID {
+	// Return a random subscription
+	index := rand.Intn(len(*subs))
+	return (*subs)[index].Id
+}
+
 // Populates `OrganizationCollection` with `count` random orgs
 func PopulateOrgs(db *mongo.Database, ctx context.Context, base generators.Base, count uint) {
+	// Create collection
 	collection := "OrganizationCollection"
 	err := db.CreateCollection(ctx, collection)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	organizationCollection := db.Collection(collection)
 	// boolGen := generators.NewBoolGenerator(base)
 
@@ -81,34 +144,41 @@ func PopulateOrgs(db *mongo.Database, ctx context.Context, base generators.Base,
 		newPreGen := preGen{isSuperOrg: isSuperOrg, isSubOrg: isSubOrg}
 		preGenMap[i] = newPreGen
 	}
+	users := GetUsers(db, ctx)
+	subscriptions := GetSubscriptions(db, ctx)
 
 	// Generate and insert data
 	for i := uint(1); i <= count; i++ {
 		preGen := preGenMap[i]
-		insert := bson.D{
-			{Key: "_id", Value: int32(i)},
-			{Key: "isClosed", Value: gofakeit.Bool()},
-			{Key: "name", Value: gofakeit.Company()},
-			{Key: "location", Value: gofakeit.City() + ", " + gofakeit.State()},
-			{Key: "logoURL", Value: "https://ucarecdn.com/c76800e5-939f-43f6-a6de-750a2692e31e/"},
-			{Key: "domain", Value: gofakeit.DomainName()},
-			{Key: "domainWhiteList", Value: genDomainWhiteList(3)},
-			{Key: "size", Value: genSize()},
-			{Key: "team", Value: genTeam()},
-			{Key: "industry", Value: gofakeit.BuzzWord()},
-			{Key: "isSuperOrg", Value: preGen.isSuperOrg},
-			{Key: "isSubOrg", Value: preGen.isSubOrg},
-			{Key: "showComment", Value: gofakeit.Bool()},
-			{Key: "disableCommentBox", Value: gofakeit.Bool()},
-			{Key: "isIVBranded", Value: gofakeit.Bool()},
-			{Key: "brandColor", Value: gofakeit.HexColor()},
-			{Key: "brandBGImage", Value: "https://ucarecdn.com/ca12d558-8553-478a-a415-4b75c42cf6ed/lyft_logo.png"},
-			// {Key: "customCareerlanding", Value: }
+		insert := &Organization{
+			Id:                int32(i),
+			IsClosed:          gofakeit.Bool(),
+			Name:              gofakeit.Company(),
+			Location:          gofakeit.City() + ", " + gofakeit.State(),
+			LogoURL:           "https://ucarecdn.com/c76800e5-939f-43f6-a6de-750a2692e31e/",
+			Domain:            gofakeit.DomainName(),
+			DomainWhiteList:   genDomainWhiteList(3),
+			Size:              genSize(),
+			Team:              genTeam(),
+			Industry:          gofakeit.BuzzWord(),
+			IsSuperOrg:        preGen.isSuperOrg,
+			IsSubOrg:          preGen.isSubOrg,
+			ShowComment:       gofakeit.Bool(),
+			DisableCommentBox: gofakeit.Bool(),
+			IsIVBranded:       gofakeit.Bool(),
+			BrandColor:        gofakeit.HexColor(),
+			BrandBGImage:      "https://ucarecdn.com/ca12d558-8553-478a-a415-4b75c42cf6ed/lyft_logo.png",
+			CustomCareerLanding: CustomCareerLanding{
+				HeaderTitle: genHeaderTitle(),
+				MainTitle:   genMainTitle(),
+				SubTitle:    genSubtitle(),
+			},
+			Creator:      genCreator(&users),
+			Subscription: genSubscription(&subscriptions),
 		}
 		// If org is a super org, add `subOrgs` field
 		if preGen.isSuperOrg {
-			insert = append(insert,
-				bson.E{Key: "subOrgs", Value: genSubOrgs(base, subOrgs)})
+			insert.SubOrgs = genSubOrgs(base, subOrgs)
 		}
 		_, err = organizationCollection.InsertOne(ctx, insert)
 		if err != nil {
