@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 
-	"github.com/JRagone/mongo-data-gen/generators"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -15,7 +14,7 @@ type Subscription struct {
 }
 
 // Populates `UserCollection` with `count` random users
-func PopulateSubscriptions(db *mongo.Database, ctx context.Context, base generators.Base, count uint) {
+func PopulateSubscriptions(preSubscriptions map[primitive.ObjectID]Subscription, db *mongo.Database, ctx context.Context, count uint) {
 	// Create collection
 	collection := "subscriptionCollection"
 	err := db.CreateCollection(ctx, collection)
@@ -24,15 +23,35 @@ func PopulateSubscriptions(db *mongo.Database, ctx context.Context, base generat
 	}
 	subscriptionCollection := db.Collection(collection)
 
+	var subscriptions []Subscription
 	// Generate and insert data
-	for i := uint(1); i <= count; i++ {
-		insert := &Subscription{
-			Id: primitive.NewObjectID(),
+	for objectId := range preSubscriptions {
+		subscription := Subscription{
+			Id: objectId,
 		}
-		_, err = subscriptionCollection.InsertOne(ctx, insert)
-		if err != nil {
-			log.Fatal(err)
+		subscriptions = append(subscriptions, subscription)
+	}
+	// Convert []Subscription to []interface{}
+	var interfaceSubs []interface{}
+	for _, subscription := range subscriptions {
+		interfaceSubs = append(interfaceSubs, subscription)
+	}
+	_, err = subscriptionCollection.InsertMany(ctx, interfaceSubs)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+// Populates random subscriptions containing preparatory subscription data
+// in map
+func PrepopulateSubscriptions(preSubscriptions map[primitive.ObjectID]Subscription, db *mongo.Database, ctx context.Context, count uint) {
+	// Generate and insert partial data
+	for i := int32(1); i <= int32(count); i++ {
+		objectId := primitive.NewObjectID()
+		preSubscription := Subscription{
+			Id: objectId,
 		}
+		preSubscriptions[objectId] = preSubscription
 	}
 }
 

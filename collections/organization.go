@@ -5,8 +5,8 @@ import (
 	"log"
 	"math/rand"
 
-	"github.com/JRagone/mongo-data-gen/generators"
 	"github.com/brianvoe/gofakeit/v6"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -46,6 +46,9 @@ type preGen struct {
 	isSubOrg   bool
 }
 
+const orgCollectionName = "OrganizationCollection"
+const maxSubOrgs = 5
+
 var orgSizes = [...]string{"1-100", "101-200", "201-1000", "1001-2000", "2001-4000", "4001+"}
 var teams = [...]string{"Product", "Recruiting", "Sales", "Hiring team"}
 
@@ -71,18 +74,25 @@ func genTeam() string {
 }
 
 // Generates random slice of sub organizations
-func genSubOrgs(base generators.Base, subOrgs []int32) []int32 {
+func genSubOrgs(subOrgs []int32) []int32 {
+	// Select number of sub orgs to return
 	var selectedSubOrgs []int32
 	numSubOrgs := rand.Intn(len(subOrgs))
 	if len(subOrgs) == 0 {
 		log.Fatal("There are zero sub orgs.")
 		return selectedSubOrgs
 	}
+	if numSubOrgs > maxSubOrgs {
+		numSubOrgs = maxSubOrgs
+	}
 
+	// Shuffle sub orgs so all calls don't get the same sub orgs
 	rand.Shuffle(len(subOrgs), func(i, j int) {
 		subOrgs[i], subOrgs[j] = subOrgs[j], subOrgs[i]
 	})
-	for i := 0; i <= numSubOrgs; i++ {
+
+	// Select sub orgs
+	for i := 0; i < numSubOrgs; i++ {
 		selectedSubOrgs = append(selectedSubOrgs, subOrgs[i])
 	}
 	return selectedSubOrgs
@@ -108,50 +118,36 @@ func genSubtitle() string {
 }
 
 // Generates a random creator, which is a reference Id to a user
-func genCreator(users *[]User) int32 {
+func genCreator(users map[int32]User) int32 {
 	// Return a random user
-	index := rand.Intn(len(*users))
-	return (*users)[index].Id
+	index := rand.Int31n(int32(len(users)))
+	return users[index].Id
 }
 
 // Generates a random subscription, which is a reference
-func genSubscription(subs *[]Subscription) primitive.ObjectID {
+func genSubscription(subs map[primitive.ObjectID]Subscription) primitive.ObjectID {
 	// Return a random subscription
-	index := rand.Intn(len(*subs))
-	return (*subs)[index].Id
+	keys := make([]primitive.ObjectID, 0, len(subs))
+	for objectID := range subs {
+		keys = append(keys, objectID)
+	}
+	index := rand.Intn(len(keys))
+	return subs[keys[index]].Id
 }
 
-// Populates `OrganizationCollection` with `count` random orgs
-func PopulateOrgs(db *mongo.Database, ctx context.Context, base generators.Base, count uint) {
-	// Create collection
-	collection := "OrganizationCollection"
-	err := db.CreateCollection(ctx, collection)
-	if err != nil {
-		log.Fatal(err)
-	}
-	organizationCollection := db.Collection(collection)
-	// boolGen := generators.NewBoolGenerator(base)
+// Populates the database with `count` random orgs
+func PopulateOrgs(preOrgs map[int32]Organization, users map[int32]User, subscriptions map[primitive.ObjectID]Subscription, db *mongo.Database, ctx context.Context, count uint) {
+	// Create the collection
+	collection := CreateCollection(orgCollectionName, db, ctx)
 
-	// Generate pre-generation info
-	preGenMap := make(map[uint]preGen)
-	var subOrgs []int32
-	for i := uint(1); i <= count; i++ {
-		isSuperOrg := gofakeit.Bool()
-		isSubOrg := !isSuperOrg
-		if isSubOrg {
-			subOrgs = append(subOrgs, int32(i))
-		}
-		newPreGen := preGen{isSuperOrg: isSuperOrg, isSubOrg: isSubOrg}
-		preGenMap[i] = newPreGen
-	}
-	users := GetUsers(db, ctx)
-	subscriptions := GetSubscriptions(db, ctx)
+	// Get pre-generation info
+	subOrgs := GetSubOrgs(preOrgs)
 
+	var orgs []Organization
 	// Generate and insert data
-	for i := uint(1); i <= count; i++ {
-		preGen := preGenMap[i]
-		insert := &Organization{
-			Id:                int32(i),
+	for Id, preOrg := range preOrgs {
+		org := Organization{
+			Id:                Id,
 			IsClosed:          gofakeit.Bool(),
 			Name:              gofakeit.Company(),
 			Location:          gofakeit.City() + ", " + gofakeit.State(),
@@ -161,8 +157,8 @@ func PopulateOrgs(db *mongo.Database, ctx context.Context, base generators.Base,
 			Size:              genSize(),
 			Team:              genTeam(),
 			Industry:          gofakeit.BuzzWord(),
-			IsSuperOrg:        preGen.isSuperOrg,
-			IsSubOrg:          preGen.isSubOrg,
+			IsSuperOrg:        preOrg.IsSuperOrg,
+			IsSubOrg:          preOrg.IsSubOrg,
 			ShowComment:       gofakeit.Bool(),
 			DisableCommentBox: gofakeit.Bool(),
 			IsIVBranded:       gofakeit.Bool(),
@@ -173,16 +169,59 @@ func PopulateOrgs(db *mongo.Database, ctx context.Context, base generators.Base,
 				MainTitle:   genMainTitle(),
 				SubTitle:    genSubtitle(),
 			},
-			Creator:      genCreator(&users),
-			Subscription: genSubscription(&subscriptions),
+			Creator:      genCreator(users),
+			Subscription: genSubscription(subscriptions),
 		}
 		// If org is a super org, add `subOrgs` field
-		if preGen.isSuperOrg {
-			insert.SubOrgs = genSubOrgs(base, subOrgs)
+		if org.IsSuperOrg {
+			org.SubOrgs = genSubOrgs(subOrgs)
 		}
-		_, err = organizationCollection.InsertOne(ctx, insert)
-		if err != nil {
-			log.Fatal(err)
+		orgs = append(orgs, org)
+	}
+	// Convert []Organization to []interface{}
+	var interfaceOrgs []interface{}
+	for _, org := range orgs {
+		interfaceOrgs = append(interfaceOrgs, org)
+	}
+	_, err := collection.InsertMany(ctx, interfaceOrgs)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+// Populates random orgs containing preparatory organization data in map
+func PrepopulateOrgs(preOrgs map[int32]Organization, db *mongo.Database, ctx context.Context, count uint) {
+	// Generate and insert partial data
+	for i := int32(1); i <= int32(count); i++ {
+		isSuperOrg := gofakeit.Bool()
+		isSubOrg := !isSuperOrg
+		preOrg := Organization{
+			Id:         i,
+			IsSuperOrg: isSuperOrg,
+			IsSubOrg:   isSubOrg,
+		}
+		preOrgs[i] = preOrg
+	}
+}
+
+// Gets an organization by `Id`
+func GetOrg(Id int32, db *mongo.Database, ctx context.Context) Organization {
+	var org Organization
+	collection := db.Collection(orgCollectionName)
+	err := collection.FindOne(ctx, bson.M{"_id": Id}).Decode(&org)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return org
+}
+
+// Gets a slice of all orgs that are sub orgs
+func GetSubOrgs(preOrgs map[int32]Organization) []int32 {
+	var subOrgs []int32
+	for _, preOrg := range preOrgs {
+		if preOrg.IsSubOrg {
+			subOrgs = append(subOrgs, preOrg.Id)
 		}
 	}
+	return subOrgs
 }
