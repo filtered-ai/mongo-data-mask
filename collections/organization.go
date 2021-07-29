@@ -135,15 +135,11 @@ func genSubscription(subs map[primitive.ObjectID]Subscription) primitive.ObjectI
 	return subs[keys[index]].Id
 }
 
-// Populates the database with `count` random orgs
-func PopulateOrgs(preOrgs map[int32]Organization, users map[int32]User, subscriptions map[primitive.ObjectID]Subscription, db *mongo.Database, ctx context.Context, count uint) {
-	// Create the collection
-	collection := CreateCollection(orgCollectionName, db, ctx)
-
+// Compose Organization object
+func composeOrgs(preOrgs map[int32]Organization, users map[int32]User, subscriptions map[primitive.ObjectID]Subscription) []Organization {
+	var orgs []Organization
 	// Get pre-generation info
 	subOrgs := GetSubOrgs(preOrgs)
-
-	var orgs []Organization
 	// Generate and insert data
 	for Id, preOrg := range preOrgs {
 		org := Organization{
@@ -178,6 +174,15 @@ func PopulateOrgs(preOrgs map[int32]Organization, users map[int32]User, subscrip
 		}
 		orgs = append(orgs, org)
 	}
+	return orgs
+}
+
+// Populates the database with `count` random orgs
+func PopulateOrgs(preOrgs map[int32]Organization, users map[int32]User, subscriptions map[primitive.ObjectID]Subscription, db *mongo.Database, ctx context.Context, count uint) {
+	// Create the collection
+	collection := CreateCollection(orgCollectionName, db, ctx)
+	// Get pre-generation info
+	orgs := composeOrgs(preOrgs, users, subscriptions)
 	// Convert []Organization to []interface{}
 	var interfaceOrgs []interface{}
 	for _, org := range orgs {
