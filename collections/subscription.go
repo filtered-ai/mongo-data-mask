@@ -9,12 +9,19 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+type SubscriptionCollection struct {
+	Count int32
+	Data  SubscriptionData
+}
+
+type SubscriptionData map[primitive.ObjectID]Subscription
+
 type Subscription struct {
 	Id primitive.ObjectID `bson:"_id"`
 }
 
 // Populates `UserCollection` with `count` random users
-func PopulateSubscriptions(preSubscriptions map[primitive.ObjectID]Subscription, db *mongo.Database, ctx context.Context, count uint) {
+func PopulateSubscriptions(generated Collections, db *mongo.Database, ctx context.Context) {
 	// Create collection
 	collection := "subscriptionCollection"
 	err := db.CreateCollection(ctx, collection)
@@ -25,7 +32,7 @@ func PopulateSubscriptions(preSubscriptions map[primitive.ObjectID]Subscription,
 
 	var subscriptions []Subscription
 	// Generate and insert data
-	for objectId := range preSubscriptions {
+	for objectId := range generated.Subscriptions.Data {
 		subscription := Subscription{
 			Id: objectId,
 		}
@@ -44,14 +51,14 @@ func PopulateSubscriptions(preSubscriptions map[primitive.ObjectID]Subscription,
 
 // Populates random subscriptions containing preparatory subscription data
 // in map
-func PrepopulateSubscriptions(preSubscriptions map[primitive.ObjectID]Subscription, db *mongo.Database, ctx context.Context, count uint) {
+func PrepopulateSubscriptions(generated Collections, db *mongo.Database, ctx context.Context) {
 	// Generate and insert partial data
-	for i := int32(1); i <= int32(count); i++ {
+	for i := int32(1); i <= generated.Subscriptions.Count; i++ {
 		objectId := primitive.NewObjectID()
-		preSubscription := Subscription{
+		subscription := Subscription{
 			Id: objectId,
 		}
-		preSubscriptions[objectId] = preSubscription
+		generated.Subscriptions.Data[objectId] = subscription
 	}
 }
 

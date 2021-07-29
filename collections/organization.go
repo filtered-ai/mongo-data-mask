@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"math/rand"
+	"time"
 
 	"github.com/brianvoe/gofakeit/v6"
 	"go.mongodb.org/mongo-driver/bson"
@@ -11,39 +12,54 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+type OrganizationCollection struct {
+	Count int32
+	Data  OrganizationData
+}
+
+type OrganizationData map[int32]Organization
+
+type Organization struct {
+	Id                         int32               `bson:"_id"`
+	IsClosed                   bool                `bson:"isClosed"`
+	Name                       string              `bson:"name"`
+	Location                   string              `bson:"location"`
+	LogoURL                    string              `bson:"logoURL"`
+	Domain                     string              `bson:"domain"`
+	DomainWhiteList            []string            `bson:"domainWhiteList"`
+	Size                       string              `bson:"size"`
+	Team                       string              `bson:"team"`
+	Industry                   string              `bson:"industry"`
+	IsSuperOrg                 bool                `bson:"isSuperOrg"`
+	IsSubOrg                   bool                `bson:"isSubOrg"`
+	ShowComment                bool                `bson:"showComment"`
+	DisableCommentBox          bool                `bson:"disableCommentBox"`
+	IsIVBranded                bool                `bson:"isIVBranded"`
+	BrandColor                 string              `bson:"brandColor"`
+	BrandBGImage               string              `bson:"brandBGImage"`
+	CustomCareerLanding        CustomCareerLanding `bson:"customCareerLanding"`
+	Creator                    int32               `bson:"creator"`
+	SubOrgs                    []int32             `bson:"subOrgs,omitempty"`
+	Subscription               primitive.ObjectID  `bson:"subscription"`
+	CreateDate                 time.Time           `bson:"createDate"`
+	EnableMockInterview        bool                `bson:"enableMockInterview"`
+	EnableCandyLiveRoom        bool                `bson:"enableCandyLiveRoom"`
+	AutoCreateCandyLiveRoom    bool                `bson:"autoCreateCandyLiveRoom"`
+	EnableOpenLiveRoom         bool                `bson:"enableOpenLiveRoom"`
+	EnableClientPortal         bool                `bson:"enableClientPortal"`
+	EnableSlackFeatures        bool                `bson:"enableSlackFeatures"`
+	EnableLiveRoomWorkspaceIDE bool                `bson:"enableLiveRoomWorkspaceIDE"`
+	EnableLiveRoomWorkspaceVNC bool                `bson:"enableLiveRoomWorkspaceVNC"`
+	SlackTeamName              string              `bson:"slackTeamName,omitempty"`
+	SlackIncomingWebhook       interface{}         `bson:"slackIncomingWebhook"`
+	CandySocials               []string            `bson:"candySocials"`
+	WeeklyReport               bool                `bson:"weeklyReport"`
+}
+
 type CustomCareerLanding struct {
 	HeaderTitle string `bson:"headerTitle"`
 	MainTitle   string `bson:"mainTitle"`
 	SubTitle    string `bson:"subTitle"`
-}
-
-type Organization struct {
-	Id                  int32               `bson:"_id"`
-	IsClosed            bool                `bson:"isClosed"`
-	Name                string              `bson:"name"`
-	Location            string              `bson:"location"`
-	LogoURL             string              `bson:"logoURL"`
-	Domain              string              `bson:"domain"`
-	DomainWhiteList     []string            `bson:"domainWhiteList"`
-	Size                string              `bson:"size"`
-	Team                string              `bson:"team"`
-	Industry            string              `bson:"industry"`
-	IsSuperOrg          bool                `bson:"isSuperOrg"`
-	IsSubOrg            bool                `bson:"isSubOrg"`
-	ShowComment         bool                `bson:"showComment"`
-	DisableCommentBox   bool                `bson:"disableCommentBox"`
-	IsIVBranded         bool                `bson:"isIVBranded"`
-	BrandColor          string              `bson:"brandColor"`
-	BrandBGImage        string              `bson:"brandBGImage"`
-	CustomCareerLanding CustomCareerLanding `bson:"customCareerLanding"`
-	Creator             int32               `bson:"creator"`
-	SubOrgs             []int32             `bson:"subOrgs,omitempty"`
-	Subscription        primitive.ObjectID  `bson:"subscription"`
-}
-
-type preGen struct {
-	isSuperOrg bool
-	isSubOrg   bool
 }
 
 const orgCollectionName = "OrganizationCollection"
@@ -51,6 +67,7 @@ const maxSubOrgs = 5
 
 var orgSizes = [...]string{"1-100", "101-200", "201-1000", "1001-2000", "2001-4000", "4001+"}
 var teams = [...]string{"Product", "Recruiting", "Sales", "Hiring team"}
+var candidateSocials = [...]string{"linkedin", "github", "bitbucket", "gitlab"}
 
 // Generates `length` random domains
 func genDomainWhiteList(length uint) []string {
@@ -135,13 +152,27 @@ func genSubscription(subs map[primitive.ObjectID]Subscription) primitive.ObjectI
 	return subs[keys[index]].Id
 }
 
+// Generates a random create date
+func genCreateDate() time.Time {
+	newYork, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		log.Fatal(err)
+	}
+	return gofakeit.DateRange(time.Date(2017, 1, 1, 1, 1, 1, 1, newYork), time.Now())
+}
+
+// Generates a slice of platforms candidates can integrate through
+func genCandySocials() []string {
+	return candidateSocials[:]
+}
+
 // Compose Organization object
-func composeOrgs(preOrgs map[int32]Organization, users map[int32]User, subscriptions map[primitive.ObjectID]Subscription) []Organization {
+func composeOrgs(generated Collections) []Organization {
 	var orgs []Organization
 	// Get pre-generation info
-	subOrgs := GetSubOrgs(preOrgs)
+	subOrgs := GetSubOrgs(generated.Organizations.Data)
 	// Generate and insert data
-	for Id, preOrg := range preOrgs {
+	for Id, preOrg := range generated.Organizations.Data {
 		org := Organization{
 			Id:                Id,
 			IsClosed:          gofakeit.Bool(),
@@ -165,8 +196,19 @@ func composeOrgs(preOrgs map[int32]Organization, users map[int32]User, subscript
 				MainTitle:   genMainTitle(),
 				SubTitle:    genSubtitle(),
 			},
-			Creator:      genCreator(users),
-			Subscription: genSubscription(subscriptions),
+			Creator:                    genCreator(generated.Users.Data),
+			Subscription:               genSubscription(generated.Subscriptions.Data),
+			CreateDate:                 genCreateDate(),
+			EnableMockInterview:        gofakeit.Bool(),
+			EnableCandyLiveRoom:        gofakeit.Bool(),
+			AutoCreateCandyLiveRoom:    gofakeit.Bool(),
+			EnableOpenLiveRoom:         gofakeit.Bool(),
+			EnableClientPortal:         gofakeit.Bool(),
+			EnableSlackFeatures:        gofakeit.Bool(),
+			EnableLiveRoomWorkspaceIDE: gofakeit.Bool(),
+			EnableLiveRoomWorkspaceVNC: gofakeit.Bool(),
+			CandySocials:               genCandySocials(),
+			WeeklyReport:               gofakeit.Bool(),
 		}
 		// If org is a super org, add `subOrgs` field
 		if org.IsSuperOrg {
@@ -178,11 +220,11 @@ func composeOrgs(preOrgs map[int32]Organization, users map[int32]User, subscript
 }
 
 // Populates the database with `count` random orgs
-func PopulateOrgs(preOrgs map[int32]Organization, users map[int32]User, subscriptions map[primitive.ObjectID]Subscription, db *mongo.Database, ctx context.Context, count uint) {
+func PopulateOrgs(generated Collections, db *mongo.Database, ctx context.Context) {
 	// Create the collection
 	collection := CreateCollection(orgCollectionName, db, ctx)
 	// Get pre-generation info
-	orgs := composeOrgs(preOrgs, users, subscriptions)
+	orgs := composeOrgs(generated)
 	// Convert []Organization to []interface{}
 	var interfaceOrgs []interface{}
 	for _, org := range orgs {
@@ -195,17 +237,17 @@ func PopulateOrgs(preOrgs map[int32]Organization, users map[int32]User, subscrip
 }
 
 // Populates random orgs containing preparatory organization data in map
-func PrepopulateOrgs(preOrgs map[int32]Organization, db *mongo.Database, ctx context.Context, count uint) {
+func PrepopulateOrgs(generated Collections, db *mongo.Database, ctx context.Context) {
 	// Generate and insert partial data
-	for i := int32(1); i <= int32(count); i++ {
+	for i := int32(1); i <= generated.Organizations.Count; i++ {
 		isSuperOrg := gofakeit.Bool()
 		isSubOrg := !isSuperOrg
-		preOrg := Organization{
+		org := Organization{
 			Id:         i,
 			IsSuperOrg: isSuperOrg,
 			IsSubOrg:   isSubOrg,
 		}
-		preOrgs[i] = preOrg
+		generated.Organizations.Data[i] = org
 	}
 }
 
@@ -221,11 +263,11 @@ func GetOrg(Id int32, db *mongo.Database, ctx context.Context) Organization {
 }
 
 // Gets a slice of all orgs that are sub orgs
-func GetSubOrgs(preOrgs map[int32]Organization) []int32 {
+func GetSubOrgs(orgs OrganizationData) []int32 {
 	var subOrgs []int32
-	for _, preOrg := range preOrgs {
-		if preOrg.IsSubOrg {
-			subOrgs = append(subOrgs, preOrg.Id)
+	for _, org := range orgs {
+		if org.IsSubOrg {
+			subOrgs = append(subOrgs, org.Id)
 		}
 	}
 	return subOrgs

@@ -9,7 +9,6 @@ import (
 	"github.com/JRagone/mongo-data-gen/collections"
 	"github.com/JRagone/mongo-data-gen/generators"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -30,21 +29,24 @@ func PopulateDatabase(client *mongo.Client, ctx context.Context) {
 	}
 	rand.Seed(int64(base.Seed))
 
+	// This and many functions can be refactored when generics are introduced
+	// to Go, hopefully by or in 2022
 	start := time.Now()
-	orgCount := uint(1000)
-	userCount := uint(4)
-	subCount := uint(4)
-	preOrgs := make(map[int32]collections.Organization)
-	users := make(map[int32]collections.User)
-	subscriptions := make(map[primitive.ObjectID]collections.Subscription)
+	var generated collections.Collections
+	generated.Organizations.Count = int32(1000)
+	generated.Organizations.Data = make(collections.OrganizationData)
+	generated.Users.Count = int32(400)
+	generated.Users.Data = make(collections.UserData)
+	generated.Subscriptions.Count = int32(400)
+	generated.Subscriptions.Data = make(collections.SubscriptionData)
 	// Preparatory data generation pass
-	collections.PrepopulateOrgs(preOrgs, db, ctx, orgCount)
-	collections.PrepopulateUsers(users, db, ctx, userCount)
-	collections.PrepopulateSubscriptions(subscriptions, db, ctx, subCount)
+	collections.PrepopulateOrgs(generated, db, ctx)
+	collections.PrepopulateUsers(generated, db, ctx)
+	collections.PrepopulateSubscriptions(generated, db, ctx)
 	// Complete data generation pass
-	collections.PopulateUsers(users, db, ctx, userCount)
-	collections.PopulateSubscriptions(subscriptions, db, ctx, subCount)
-	collections.PopulateOrgs(preOrgs, users, subscriptions, db, ctx, orgCount)
+	collections.PopulateUsers(generated, db, ctx)
+	collections.PopulateSubscriptions(generated, db, ctx)
+	collections.PopulateOrgs(generated, db, ctx)
 	elapsed := time.Since(start)
 	log.Printf("Generation took %s", elapsed)
 }

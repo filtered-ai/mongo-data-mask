@@ -7,6 +7,12 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+type Collections struct {
+	Organizations OrganizationCollection
+	Users         UserCollection
+	Subscriptions SubscriptionCollection
+}
+
 // Creates a collection
 func CreateCollection(collection string, db *mongo.Database, ctx context.Context) *mongo.Collection {
 	err := db.CreateCollection(ctx, collection)

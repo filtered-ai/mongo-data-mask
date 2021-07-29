@@ -10,12 +10,19 @@ import (
 
 const userCollectionName = "UserCollection"
 
+type UserCollection struct {
+	Count int32
+	Data  UserData
+}
+
+type UserData map[int32]User
+
 type User struct {
 	Id int32 `bson:"_id"`
 }
 
 // Populates `UserCollection` with `count` random users
-func PopulateUsers(preUsers map[int32]User, db *mongo.Database, ctx context.Context, count uint) {
+func PopulateUsers(generated Collections, db *mongo.Database, ctx context.Context) {
 	// Create collection
 	err := db.CreateCollection(ctx, userCollectionName)
 	if err != nil {
@@ -25,7 +32,7 @@ func PopulateUsers(preUsers map[int32]User, db *mongo.Database, ctx context.Cont
 
 	var users []User
 	// Generate and insert data
-	for Id := range preUsers {
+	for Id := range generated.Users.Data {
 		user := User{
 			Id: Id,
 		}
@@ -42,13 +49,13 @@ func PopulateUsers(preUsers map[int32]User, db *mongo.Database, ctx context.Cont
 	}
 }
 
-func PrepopulateUsers(preUsers map[int32]User, db *mongo.Database, ctx context.Context, count uint) {
+func PrepopulateUsers(generated Collections, db *mongo.Database, ctx context.Context) {
 	// Generate and insert partial data
-	for i := int32(1); i <= int32(count); i++ {
-		preUser := User{
+	for i := int32(1); i <= generated.Users.Count; i++ {
+		user := User{
 			Id: i,
 		}
-		preUsers[i] = preUser
+		generated.Users.Data[i] = user
 	}
 }
 
