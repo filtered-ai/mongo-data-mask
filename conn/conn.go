@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"github.com/JRagone/mongo-data-gen/comm"
+	"github.com/JRagone/mongo-data-gen/conn/org"
+	"github.com/JRagone/mongo-data-gen/conn/sub"
+	"github.com/JRagone/mongo-data-gen/conn/user"
 	"github.com/JRagone/mongo-data-gen/generators"
-	"github.com/JRagone/mongo-data-gen/user"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -37,9 +39,9 @@ func (c *Connection) New(client *mongo.Client, ctx context.Context) {
 		Seed: seed,
 	}
 	rand.Seed(int64(base.Seed))
-	// c.Coll[orgName] = newOrg(1000)
+	c.coll[org.Name] = org.New(1000)
 	c.coll[user.Name] = user.New(1000)
-	// c.Coll[subscription.Name] = subscription.New(1000)
+	c.coll[sub.Name] = sub.New(1000)
 }
 
 func (c *Connection) DB() *mongo.Database {

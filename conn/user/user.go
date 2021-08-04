@@ -39,7 +39,7 @@ func (c Collection) Populate(conn comm.Connectioner) {
 	// Create collection
 	collection := comm.CreateCollection(Name, conn)
 
-	var users []User
+	var users []interface{}
 	// Generate and insert data
 	for Id := range c.data {
 		user := User{
@@ -47,12 +47,7 @@ func (c Collection) Populate(conn comm.Connectioner) {
 		}
 		users = append(users, user)
 	}
-	// Convert []User to []interface{}
-	var interfaceUsers []interface{}
-	for _, user := range users {
-		interfaceUsers = append(interfaceUsers, user)
-	}
-	_, err := collection.InsertMany(*conn.Ctx(), interfaceUsers)
+	_, err := collection.InsertMany(*conn.Ctx(), users)
 	if err != nil {
 		log.Fatal(err)
 	}
