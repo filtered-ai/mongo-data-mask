@@ -1,38 +1,50 @@
-package collections
+package user
 
 import (
 	"context"
 	"log"
 
+	"github.com/JRagone/mongo-data-gen/comm"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-const userCollectionName = "UserCollection"
-
-type UserCollection struct {
-	Count int32
-	Data  UserData
+type Collection struct {
+	count int32
+	data  Data
 }
 
-type UserData map[int32]User
+type Data map[int32]User
 
 type User struct {
 	Id int32 `bson:"_id"`
 }
 
-// Populates `UserCollection` with `count` random users
-func PopulateUsers(generated Collections, db *mongo.Database, ctx context.Context) {
-	// Create collection
-	err := db.CreateCollection(ctx, userCollectionName)
-	if err != nil {
-		log.Fatal(err)
+const Name = "UserCollection"
+
+func New(count int32) *Collection {
+	return &Collection{
+		count: count,
+		data:  make(Data),
 	}
-	collection := db.Collection(userCollectionName)
+}
+
+func (c Collection) Count() int32 {
+	return c.count
+}
+
+func (c Collection) Data() interface{} {
+	return c.data
+}
+
+// Populates `UserCollection` with `count` random users
+func (c Collection) Populate(conn comm.Connectioner) {
+	// Create collection
+	collection := comm.CreateCollection(Name, conn)
 
 	var users []User
 	// Generate and insert data
-	for Id := range generated.Users.Data {
+	for Id := range conn.Collection(Name).Data().(Data) {
 		user := User{
 			Id: Id,
 		}
@@ -43,25 +55,25 @@ func PopulateUsers(generated Collections, db *mongo.Database, ctx context.Contex
 	for _, user := range users {
 		interfaceUsers = append(interfaceUsers, user)
 	}
-	_, err = collection.InsertMany(ctx, interfaceUsers)
+	_, err := collection.InsertMany(*conn.Context(), interfaceUsers)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func PrepopulateUsers(generated Collections, db *mongo.Database, ctx context.Context) {
+func (c Collection) Prepopulate(conn comm.Connectioner) {
 	// Generate and insert partial data
-	for i := int32(1); i <= generated.Users.Count; i++ {
+	for i := int32(1); i <= conn.Collection(Name).Count(); i++ {
 		user := User{
 			Id: i,
 		}
-		generated.Users.Data[i] = user
+		conn.Collection(Name).Data().(Data)[i] = user
 	}
 }
 
 // Gets and returns a slice of all users
-func GetUsers(db *mongo.Database, ctx context.Context) []User {
-	collection := db.Collection(userCollectionName)
+func Get(db *mongo.Database, ctx context.Context) []User {
+	collection := db.Collection(Name)
 	cursor, err := collection.Find(ctx, bson.M{})
 	if err != nil {
 		log.Fatal(err)

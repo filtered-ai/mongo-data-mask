@@ -5,7 +5,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/JRagone/mongo-data-gen/database"
+	"github.com/JRagone/mongo-data-gen/comm"
+	"github.com/JRagone/mongo-data-gen/conn"
 	"github.com/brianvoe/gofakeit/v6"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -29,5 +30,7 @@ func main() {
 	defer cancel()
 	defer client.Disconnect(ctx)
 
-	database.PopulateDatabase(client, ctx)
+	c := conn.Connection{Coll: make(map[string]comm.Collectioner), Ctx: ctx}
+	c.New(client, ctx)
+	c.Populate()
 }
