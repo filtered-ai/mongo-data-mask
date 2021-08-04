@@ -6,22 +6,21 @@ package org
 // 	"math/rand"
 // 	"time"
 
-// 	"github.com/JRagone/mongo-data-gen/db"
+// 	"github.com/JRagone/mongo-data-gen/comm"
 // 	"github.com/brianvoe/gofakeit/v6"
 // 	"go.mongodb.org/mongo-driver/bson"
 // 	"go.mongodb.org/mongo-driver/bson/primitive"
 // 	"go.mongodb.org/mongo-driver/mongo"
 // )
 
-// type organization struct {
+// type Collection struct {
 // 	count int32
-// 	data  orgData
-// 	name  string
+// 	data  Data
 // }
 
-// type orgData map[int32]orgSchema
+// type Data map[int32]Organization
 
-// type orgSchema struct {
+// type Organization struct {
 // 	Id                         int32               `bson:"_id"`
 // 	IsClosed                   bool                `bson:"isClosed"`
 // 	Name                       string              `bson:"name"`
@@ -58,13 +57,13 @@ package org
 // 	WeeklyReport               bool                `bson:"weeklyReport"`
 // }
 
-// type customCareerLanding struct {
+// type CustomCareerLanding struct {
 // 	HeaderTitle string `bson:"headerTitle"`
 // 	MainTitle   string `bson:"mainTitle"`
 // 	SubTitle    string `bson:"subTitle"`
 // }
 
-// const orgName = "OrganizationCollection"
+// const Name = "OrganizationCollection"
 // const maxSubOrgs = 5
 
 // var orgSizes = [...]string{
@@ -78,19 +77,18 @@ package org
 // var teams = [...]string{"Product", "Recruiting", "Sales", "Hiring team"}
 // var candidateSocials = [...]string{"linkedin", "github", "bitbucket", "gitlab"}
 
-// func newOrg(count int32) organization {
-// 	return organization{
-// 		name:  orgName,
+// func New(count int32) *Collection {
+// 	return &Collection{
 // 		count: count,
-// 		data:  make(orgData),
+// 		data:  make(Data),
 // 	}
 // }
 
-// func (c organization) Count() int32 {
+// func (c Collection) Count() int32 {
 // 	return c.count
 // }
 
-// func (c organization) Data() orgData {
+// func (c Collection) Data() interface{} {
 // 	return c.data
 // }
 
@@ -192,12 +190,12 @@ package org
 // }
 
 // // Compose Organization object
-// func composeOrgs(generated Collections) []Organization {
+// func (c Collection) composeOrgs(conn comm.Connectioner) []Organization {
 // 	var orgs []Organization
 // 	// Get pre-generation info
-// 	subOrgs := GetSubOrgs(generated.Organizations.Data)
+// 	subOrgs := GetSubOrgs(c.data)
 // 	// Generate and insert data
-// 	for Id, preOrg := range generated.Organizations.Data {
+// 	for Id, preOrg := range c.data {
 // 		org := Organization{
 // 			Id:                Id,
 // 			IsClosed:          gofakeit.Bool(),
@@ -245,26 +243,26 @@ package org
 // }
 
 // // Populates the database with `count` random orgs
-// func Populate(generated db.DBer, db *mongo.Database, ctx context.Context) {
+// func (c Collection) Populate(conn comm.Connectioner) {
 // 	// Create the collection
-// 	collection := CreateCollection(Name, db, ctx)
+// 	collection := comm.CreateCollection(Name, conn)
 // 	// Get pre-generation info
-// 	orgs := composeOrgs(generated)
+// 	orgs := composeOrgs(conn)
 // 	// Convert []Organization to []interface{}
 // 	var interfaceOrgs []interface{}
 // 	for _, org := range orgs {
 // 		interfaceOrgs = append(interfaceOrgs, org)
 // 	}
-// 	_, err := collection.InsertMany(ctx, interfaceOrgs)
+// 	_, err := collection.InsertMany(*conn.Context(), interfaceOrgs)
 // 	if err != nil {
 // 		log.Fatal(err)
 // 	}
 // }
 
 // // Populates random orgs containing preparatory organization data in map
-// func Prepopulate(generated Collections, db *mongo.Database, ctx context.Context) {
+// func (c Collection) Prepopulate() {
 // 	// Generate and insert partial data
-// 	for i := int32(1); i <= generated.Organizations.Count; i++ {
+// 	for i := int32(1); i <= c.count; i++ {
 // 		isSuperOrg := gofakeit.Bool()
 // 		isSubOrg := !isSuperOrg
 // 		org := Organization{
@@ -272,7 +270,7 @@ package org
 // 			IsSuperOrg: isSuperOrg,
 // 			IsSubOrg:   isSubOrg,
 // 		}
-// 		generated.Organizations.Data[i] = org
+// 		c.data[i] = org
 // 	}
 // }
 

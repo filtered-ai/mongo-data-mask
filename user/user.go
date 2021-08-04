@@ -1,12 +1,9 @@
 package user
 
 import (
-	"context"
 	"log"
 
 	"github.com/JRagone/mongo-data-gen/comm"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Collection struct {
@@ -44,7 +41,7 @@ func (c Collection) Populate(conn comm.Connectioner) {
 
 	var users []User
 	// Generate and insert data
-	for Id := range conn.Collection(Name).Data().(Data) {
+	for Id := range c.data {
 		user := User{
 			Id: Id,
 		}
@@ -55,37 +52,18 @@ func (c Collection) Populate(conn comm.Connectioner) {
 	for _, user := range users {
 		interfaceUsers = append(interfaceUsers, user)
 	}
-	_, err := collection.InsertMany(*conn.Context(), interfaceUsers)
+	_, err := collection.InsertMany(*conn.Ctx(), interfaceUsers)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func (c Collection) Prepopulate(conn comm.Connectioner) {
+func (c Collection) Prepopulate() {
 	// Generate and insert partial data
-	for i := int32(1); i <= conn.Collection(Name).Count(); i++ {
+	for i := int32(1); i <= c.count; i++ {
 		user := User{
 			Id: i,
 		}
-		conn.Collection(Name).Data().(Data)[i] = user
+		c.data[i] = user
 	}
-}
-
-// Gets and returns a slice of all users
-func Get(db *mongo.Database, ctx context.Context) []User {
-	collection := db.Collection(Name)
-	cursor, err := collection.Find(ctx, bson.M{})
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer cursor.Close(ctx)
-	var users []User
-	for cursor.Next(ctx) {
-		var user User
-		if err = cursor.Decode(&user); err != nil {
-			log.Fatal(err)
-		}
-		users = append(users, user)
-	}
-	return users
 }

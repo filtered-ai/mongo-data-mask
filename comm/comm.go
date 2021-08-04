@@ -9,23 +9,23 @@ import (
 
 type Connectioner interface {
 	New(client *mongo.Client, ctx context.Context)
-	Database() *mongo.Database
-	Context() *context.Context
-	Collection(string) Collectioner
+	DB() *mongo.Database
+	Ctx() *context.Context
+	Coll(string) Collectioner
 }
 
 type Collectioner interface {
 	Count() int32
 	Data() interface{}
 	Populate(conn Connectioner)
-	Prepopulate(conn Connectioner)
+	Prepopulate()
 }
 
 // Creates a collection
-func CreateCollection(collection string, db Connectioner) *mongo.Collection {
-	err := db.Database().CreateCollection(*db.Context(), collection)
+func CreateCollection(collection string, conn Connectioner) *mongo.Collection {
+	err := conn.DB().CreateCollection(*conn.Ctx(), collection)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return db.Database().Collection(collection)
+	return conn.DB().Collection(collection)
 }
