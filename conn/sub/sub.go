@@ -3,7 +3,7 @@ package sub
 import (
 	"log"
 
-	"github.com/JRagone/mongo-data-gen/comm"
+	"github.com/JRagone/mongo-data-gen/conn/comm"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 

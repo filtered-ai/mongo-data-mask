@@ -3,7 +3,7 @@ package user
 import (
 	"log"
 
-	"github.com/JRagone/mongo-data-gen/comm"
+	"github.com/JRagone/mongo-data-gen/conn/comm"
 )
 
 type Collection struct {

@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/JRagone/mongo-data-gen/comm"
+	"github.com/JRagone/mongo-data-gen/conn/comm"
 	"github.com/JRagone/mongo-data-gen/conn/sub"
 	"github.com/JRagone/mongo-data-gen/conn/user"
 	"github.com/brianvoe/gofakeit/v6"
