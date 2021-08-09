@@ -8,9 +8,11 @@ import (
 
 	"github.com/JRagone/mongo-data-gen/conn/comm"
 	"github.com/JRagone/mongo-data-gen/conn/org"
+	"github.com/JRagone/mongo-data-gen/conn/orgconfig"
+	"github.com/JRagone/mongo-data-gen/conn/orgusage"
 	"github.com/JRagone/mongo-data-gen/conn/sub"
 	"github.com/JRagone/mongo-data-gen/conn/user"
-	"github.com/JRagone/mongo-data-gen/generators"
+	"github.com/JRagone/mongo-data-gen/gens"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -35,13 +37,16 @@ func (c *Connection) New(client *mongo.Client, ctx context.Context) {
 	}
 	// Object holding seeded random generator
 	seed := uint64(64)
-	base := generators.Base{
+	base := gens.Base{
 		Seed: seed,
 	}
 	rand.Seed(int64(base.Seed))
-	c.coll[org.Name] = org.New(1000)
+	orgCount := int32(1000)
+	c.coll[org.Name] = org.New(orgCount)
 	c.coll[user.Name] = user.New(1000)
 	c.coll[sub.Name] = sub.New(1000)
+	c.coll[orgconfig.Name] = orgconfig.New(orgCount)
+	c.coll[orgusage.Name] = orgusage.New(orgCount)
 }
 
 func (c *Connection) DB() *mongo.Database {

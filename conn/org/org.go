@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/JRagone/mongo-data-gen/conn/comm"
+	"github.com/JRagone/mongo-data-gen/conn/orgconfig"
+	"github.com/JRagone/mongo-data-gen/conn/orgusage"
 	"github.com/JRagone/mongo-data-gen/conn/sub"
 	"github.com/JRagone/mongo-data-gen/conn/user"
 	"github.com/brianvoe/gofakeit/v6"
@@ -51,9 +53,23 @@ type Organization struct {
 	EnableLiveRoomWorkspaceIDE bool                `bson:"enableLiveRoomWorkspaceIDE"`
 	EnableLiveRoomWorkspaceVNC bool                `bson:"enableLiveRoomWorkspaceVNC"`
 	SlackTeamName              string              `bson:"slackTeamName,omitempty"`
-	SlackIncomingWebhook       interface{}         `bson:"slackIncomingWebhook"`
+	SlackIncomingWebhook       interface{}         `bson:"slackIncomingWebhook,omitempty"`
 	CandySocials               []string            `bson:"candySocials"`
 	WeeklyReport               bool                `bson:"weeklyReport"`
+	Configuration              primitive.ObjectID  `bson:"Configuration"`
+	OrgUsage                   primitive.ObjectID  `bson:"orgUsage"`
+	NoRegularDashboard         bool                `bson:"noRegularDashBoard"`
+	NoDashActionBtns           bool                `bson:"noDashActionBtns"`
+	NotesEnabled               bool                `bson:"notesEnabled"`
+	EnableSimpleEEOC           bool                `bson:"enableSimpleEEOC"`
+	IsTrialExpired             bool                `bson:"isTrialExpired"`
+	EnableFlexibleCandySocial  bool                `bson:"enableFlexibleCandySocial"`
+	SessionExpireInMins        int32               `bson:"sessionExpireInMins"`
+	MFAType                    string              `bson:"MFAType"`
+	IsOrgInfoVerified          bool                `bson:"isOrgInfoVerified"`
+	NoDuplicateWindow          int32               `bson:"noDuplicateWindow"`
+	LiveRoomWorkspaceImages    int32               `bson:"liveRoomWorkspaceImages"`
+	EnableLeverIntegration     bool                `bson:"enableLeverIntegration"`
 }
 
 type CustomCareerLanding struct {
@@ -75,6 +91,7 @@ var orgSizes = [...]string{
 }
 var teams = [...]string{"Product", "Recruiting", "Sales", "Hiring team"}
 var candidateSocials = [...]string{"linkedin", "github", "bitbucket", "gitlab"}
+var mFATypes = [...]string{"SMS", "Email"}
 
 func New(count int32) *Collection {
 	return &Collection{
@@ -229,8 +246,24 @@ func (c Collection) composeOrgs(conn comm.Connectioner) []interface{} {
 			EnableSlackFeatures:        gofakeit.Bool(),
 			EnableLiveRoomWorkspaceIDE: gofakeit.Bool(),
 			EnableLiveRoomWorkspaceVNC: gofakeit.Bool(),
-			CandySocials:               genCandySocials(),
-			WeeklyReport:               gofakeit.Bool(),
+			// TODO: No Slack team name or incoming webhook, because those are
+			// almost always null
+			CandySocials:              genCandySocials(),
+			WeeklyReport:              gofakeit.Bool(),
+			Configuration:             genConfiguration(conn),
+			OrgUsage:                  genOrgUsage(Id, conn),
+			NoRegularDashboard:        gofakeit.Bool(),
+			NoDashActionBtns:          gofakeit.Bool(),
+			NotesEnabled:              gofakeit.Bool(),
+			EnableSimpleEEOC:          gofakeit.Bool(),
+			IsTrialExpired:            gofakeit.Bool(),
+			EnableFlexibleCandySocial: gofakeit.Bool(),
+			SessionExpireInMins:       1440,
+			MFAType:                   genMFAType(),
+			IsOrgInfoVerified:         gofakeit.Bool(),
+			NoDuplicateWindow:         180,
+			LiveRoomWorkspaceImages:   genLiveRoomWorkspaceImages(),
+			EnableLeverIntegration:    gofakeit.Bool(),
 		}
 		// If org is a super org, add `subOrgs` field
 		if org.IsSuperOrg {
@@ -239,6 +272,36 @@ func (c Collection) composeOrgs(conn comm.Connectioner) []interface{} {
 		orgs = append(orgs, org)
 	}
 	return orgs
+}
+
+func genConfiguration(conn comm.Connectioner) primitive.ObjectID {
+	configs := conn.Coll(orgconfig.Name).Data().(orgconfig.Data)
+	keys := make([]primitive.ObjectID, 0, len(configs))
+	for objectID := range configs {
+		keys = append(keys, objectID)
+	}
+	index := rand.Intn(len(keys))
+	return configs[keys[index]].Id
+}
+
+func genOrgUsage(id int32, conn comm.Connectioner) primitive.ObjectID {
+	usages := conn.Coll(orgusage.Name).Data().(orgusage.Data)
+	for objectID, usage := range usages {
+		if usage.Organization == id {
+			return objectID
+		}
+	}
+	log.Fatal("No org usage found matching the organization with ID ", id)
+	return primitive.NilObjectID
+}
+
+func genMFAType() string {
+	index := rand.Intn(len(mFATypes))
+	return mFATypes[index]
+}
+
+func genLiveRoomWorkspaceImages() int32 {
+	return rand.Int31n(4)
 }
 
 // Populates the database with `count` random orgs

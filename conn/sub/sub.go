@@ -40,7 +40,7 @@ func (c Collection) Populate(conn comm.Connectioner) {
 	// Create collection
 	collection := comm.CreateCollection(Name, conn)
 
-	var subscriptions []Subscription
+	var subscriptions []interface{}
 	// Generate and insert data
 	for objectId := range c.data {
 		subscription := Subscription{
@@ -48,12 +48,7 @@ func (c Collection) Populate(conn comm.Connectioner) {
 		}
 		subscriptions = append(subscriptions, subscription)
 	}
-	// Convert []Subscription to []interface{}
-	var interfaceSubs []interface{}
-	for _, subscription := range subscriptions {
-		interfaceSubs = append(interfaceSubs, subscription)
-	}
-	_, err := collection.InsertMany(*conn.Ctx(), interfaceSubs)
+	_, err := collection.InsertMany(*conn.Ctx(), subscriptions)
 	if err != nil {
 		log.Fatal(err)
 	}
