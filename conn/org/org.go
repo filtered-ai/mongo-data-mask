@@ -3,109 +3,80 @@ package org
 import (
 	"log"
 	"math/rand"
-	"time"
 
 	"github.com/JRagone/mongo-data-gen/conn/comm"
-	"github.com/JRagone/mongo-data-gen/conn/orgconfig"
-	"github.com/JRagone/mongo-data-gen/conn/orgusage"
-	"github.com/JRagone/mongo-data-gen/conn/sub"
-	"github.com/JRagone/mongo-data-gen/conn/user"
 	"github.com/brianvoe/gofakeit/v6"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Collection struct {
-	count int32
-	data  Data
+	conn comm.Connectioner
+	coll *mongo.Collection
 }
 
-type Data map[int32]Organization
-
 type Organization struct {
-	Id                         int32               `bson:"_id"`
-	IsClosed                   bool                `bson:"isClosed"`
-	Name                       string              `bson:"name"`
-	Location                   string              `bson:"location"`
-	LogoURL                    string              `bson:"logoURL"`
-	Domain                     string              `bson:"domain"`
-	DomainWhiteList            []string            `bson:"domainWhiteList"`
-	Size                       string              `bson:"size"`
-	Team                       string              `bson:"team"`
-	Industry                   string              `bson:"industry"`
-	IsSuperOrg                 bool                `bson:"isSuperOrg"`
-	IsSubOrg                   bool                `bson:"isSubOrg"`
-	ShowComment                bool                `bson:"showComment"`
-	DisableCommentBox          bool                `bson:"disableCommentBox"`
-	IsIVBranded                bool                `bson:"isIVBranded"`
-	BrandColor                 string              `bson:"brandColor"`
-	BrandBGImage               string              `bson:"brandBGImage"`
-	CustomCareerLanding        CustomCareerLanding `bson:"customCareerLanding"`
-	Creator                    int32               `bson:"creator"`
-	SubOrgs                    []int32             `bson:"subOrgs,omitempty"`
-	Subscription               primitive.ObjectID  `bson:"subscription"`
-	CreateDate                 time.Time           `bson:"createDate"`
-	EnableMockInterview        bool                `bson:"enableMockInterview"`
-	EnableCandyLiveRoom        bool                `bson:"enableCandyLiveRoom"`
-	AutoCreateCandyLiveRoom    bool                `bson:"autoCreateCandyLiveRoom"`
-	EnableOpenLiveRoom         bool                `bson:"enableOpenLiveRoom"`
-	EnableClientPortal         bool                `bson:"enableClientPortal"`
-	EnableSlackFeatures        bool                `bson:"enableSlackFeatures"`
-	EnableLiveRoomWorkspaceIDE bool                `bson:"enableLiveRoomWorkspaceIDE"`
-	EnableLiveRoomWorkspaceVNC bool                `bson:"enableLiveRoomWorkspaceVNC"`
-	SlackTeamName              string              `bson:"slackTeamName,omitempty"`
-	SlackIncomingWebhook       interface{}         `bson:"slackIncomingWebhook,omitempty"`
-	CandySocials               []string            `bson:"candySocials"`
-	WeeklyReport               bool                `bson:"weeklyReport"`
-	Configuration              primitive.ObjectID  `bson:"Configuration"`
-	OrgUsage                   primitive.ObjectID  `bson:"orgUsage"`
-	NoRegularDashboard         bool                `bson:"noRegularDashBoard"`
-	NoDashActionBtns           bool                `bson:"noDashActionBtns"`
-	NotesEnabled               bool                `bson:"notesEnabled"`
-	EnableSimpleEEOC           bool                `bson:"enableSimpleEEOC"`
-	IsTrialExpired             bool                `bson:"isTrialExpired"`
-	EnableFlexibleCandySocial  bool                `bson:"enableFlexibleCandySocial"`
-	SessionExpireInMins        int32               `bson:"sessionExpireInMins"`
-	MFAType                    string              `bson:"MFAType"`
-	IsOrgInfoVerified          bool                `bson:"isOrgInfoVerified"`
-	NoDuplicateWindow          int32               `bson:"noDuplicateWindow"`
-	LiveRoomWorkspaceImages    int32               `bson:"liveRoomWorkspaceImages"`
-	EnableLeverIntegration     bool                `bson:"enableLeverIntegration"`
+	Id                  int32               `bson:"_id,omitempty"`
+	Name                string              `bson:"name,omitempty"`
+	Location            string              `bson:"location,omitempty"`
+	LogoURL             string              `bson:"logoURL,omitempty"`
+	Domain              string              `bson:"domain,omitempty"`
+	DomainWhiteList     []string            `bson:"domainWhiteList,omitempty"`
+	Industry            string              `bson:"industry,omitempty"`
+	BrandColor          string              `bson:"brandColor,omitempty"`
+	BrandBGImage        string              `bson:"brandBGImage,omitempty"`
+	CustomCareerLanding CustomCareerLanding `bson:"customCareerLanding,omitempty"`
+	SlackTeamName       string              `bson:"slackTeamName,omitempty"`
 }
 
 type CustomCareerLanding struct {
-	HeaderTitle string `bson:"headerTitle"`
-	MainTitle   string `bson:"mainTitle"`
-	SubTitle    string `bson:"subTitle"`
+	HeaderTitle string `bson:"headerTitle,omitempty"`
+	MainTitle   string `bson:"mainTitle,omitempty"`
+	SubTitle    string `bson:"subTitle,omitempty"`
 }
 
 const Name = "OrganizationCollection"
-const maxSubOrgs = 5
 
-var orgSizes = [...]string{
-	"1-100",
-	"101-200",
-	"201-1000",
-	"1001-2000",
-	"2001-4000",
-	"4001+",
-}
-var teams = [...]string{"Product", "Recruiting", "Sales", "Hiring team"}
-var candidateSocials = [...]string{"linkedin", "github", "bitbucket", "gitlab"}
-var mFATypes = [...]string{"SMS", "Email"}
-
-func New(count int32) *Collection {
+func New(conn comm.Connectioner) *Collection {
 	return &Collection{
-		count: count,
-		data:  make(Data),
+		conn: conn,
+		coll: conn.DB().Collection(Name),
 	}
 }
 
-func (c Collection) Count() int32 {
-	return c.count
-}
-
-func (c Collection) Data() interface{} {
-	return c.data
+func (c Collection) Mask() {
+	cursor, err := c.coll.Find(*c.conn.Ctx(), bson.M{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cursor.Close(*c.conn.Ctx())
+	for cursor.Next(*c.conn.Ctx()) {
+		var org Organization
+		if err = cursor.Decode(&org); err != nil {
+			log.Fatal(err)
+		}
+		_, err := c.coll.UpdateByID(*c.conn.Ctx(), org.Id, bson.D{{
+			Key: "$set", Value: &Organization{
+				Name:            gofakeit.Company(),
+				Location:        gofakeit.City() + ", " + gofakeit.State(),
+				LogoURL:         "https://ucarecdn.com/e6de77b8-aea5-4007-b42b-2f716e8734f8/",
+				Domain:          gofakeit.DomainName(),
+				DomainWhiteList: genDomainWhiteList(uint(rand.Intn(3))),
+				Industry:        "Technology",
+				BrandColor:      gofakeit.HexColor(),
+				BrandBGImage:    "https://ucarecdn.com/ca12d558-8553-478a-a415-4b75c42cf6ed/lyft_logo.png",
+				CustomCareerLanding: CustomCareerLanding{
+					HeaderTitle: genHeaderTitle(),
+					MainTitle:   genMainTitle(),
+					SubTitle:    genSubtitle(),
+				},
+				SlackTeamName: gofakeit.Company(),
+			},
+		}})
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 }
 
 // Generates `length` random domains
@@ -115,43 +86,6 @@ func genDomainWhiteList(length uint) []string {
 		domains = append(domains, gofakeit.DomainName())
 	}
 	return domains
-}
-
-// Generates team size string
-func genSize() string {
-	index := rand.Intn(len(orgSizes))
-	return orgSizes[index]
-}
-
-// Generates team name
-func genTeam() string {
-	index := rand.Intn(len(teams))
-	return teams[index]
-}
-
-// Generates random slice of sub organizations
-func genSubOrgs(subOrgs []int32) []int32 {
-	// Select number of sub orgs to return
-	var selectedSubOrgs []int32
-	numSubOrgs := rand.Intn(len(subOrgs))
-	if len(subOrgs) == 0 {
-		log.Fatal("There are zero sub orgs.")
-		return selectedSubOrgs
-	}
-	if numSubOrgs > maxSubOrgs {
-		numSubOrgs = maxSubOrgs
-	}
-
-	// Shuffle sub orgs so all calls don't get the same sub orgs
-	rand.Shuffle(len(subOrgs), func(i, j int) {
-		subOrgs[i], subOrgs[j] = subOrgs[j], subOrgs[i]
-	})
-
-	// Select sub orgs
-	for i := 0; i < numSubOrgs; i++ {
-		selectedSubOrgs = append(selectedSubOrgs, subOrgs[i])
-	}
-	return selectedSubOrgs
 }
 
 // Generates a random header title
@@ -171,173 +105,4 @@ func genSubtitle() string {
 	const openingTags = "<h6>"
 	const closingTags = "</h6>"
 	return openingTags + gofakeit.HackerPhrase() + closingTags
-}
-
-// Generates a random creator, which is a reference Id to a user
-func genCreator(users user.Data) int32 {
-	// Return a random user
-	index := rand.Int31n(int32(len(users)))
-	return users[index].Id
-}
-
-// Generates a random subscription, which is a reference
-func genSubscription(subs sub.Data) primitive.ObjectID {
-	// Return a random subscription
-	keys := make([]primitive.ObjectID, 0, len(subs))
-	for objectID := range subs {
-		keys = append(keys, objectID)
-	}
-	index := rand.Intn(len(keys))
-	return subs[keys[index]].Id
-}
-
-// Generates a random create date
-func genCreateDate() time.Time {
-	newYork, err := time.LoadLocation("America/New_York")
-	if err != nil {
-		log.Fatal(err)
-	}
-	return gofakeit.DateRange(time.Date(2017, 1, 1, 1, 1, 1, 1, newYork), time.Now())
-}
-
-// Generates a slice of platforms candidates can integrate through
-func genCandySocials() []string {
-	return candidateSocials[:]
-}
-
-// Compose Organization object
-func (c Collection) composeOrgs(conn comm.Connectioner) []interface{} {
-	var orgs []interface{}
-	// Get pre-generation info
-	subOrgs := getSubOrgs(c.data)
-	// Generate and insert data
-	for Id, preOrg := range c.data {
-		org := Organization{
-			Id:                Id,
-			IsClosed:          gofakeit.Bool(),
-			Name:              gofakeit.Company(),
-			Location:          gofakeit.City() + ", " + gofakeit.State(),
-			LogoURL:           "https://ucarecdn.com/c76800e5-939f-43f6-a6de-750a2692e31e/",
-			Domain:            gofakeit.DomainName(),
-			DomainWhiteList:   genDomainWhiteList(3),
-			Size:              genSize(),
-			Team:              genTeam(),
-			Industry:          gofakeit.BuzzWord(),
-			IsSuperOrg:        preOrg.IsSuperOrg,
-			IsSubOrg:          preOrg.IsSubOrg,
-			ShowComment:       gofakeit.Bool(),
-			DisableCommentBox: gofakeit.Bool(),
-			IsIVBranded:       gofakeit.Bool(),
-			BrandColor:        gofakeit.HexColor(),
-			BrandBGImage:      "https://ucarecdn.com/ca12d558-8553-478a-a415-4b75c42cf6ed/lyft_logo.png",
-			CustomCareerLanding: CustomCareerLanding{
-				HeaderTitle: genHeaderTitle(),
-				MainTitle:   genMainTitle(),
-				SubTitle:    genSubtitle(),
-			},
-			Creator:                    genCreator(conn.Coll(user.Name).Data().(user.Data)),
-			Subscription:               genSubscription(conn.Coll(sub.Name).Data().(sub.Data)),
-			CreateDate:                 genCreateDate(),
-			EnableMockInterview:        gofakeit.Bool(),
-			EnableCandyLiveRoom:        gofakeit.Bool(),
-			AutoCreateCandyLiveRoom:    gofakeit.Bool(),
-			EnableOpenLiveRoom:         gofakeit.Bool(),
-			EnableClientPortal:         gofakeit.Bool(),
-			EnableSlackFeatures:        gofakeit.Bool(),
-			EnableLiveRoomWorkspaceIDE: gofakeit.Bool(),
-			EnableLiveRoomWorkspaceVNC: gofakeit.Bool(),
-			// TODO: No Slack team name or incoming webhook, because those are
-			// almost always null
-			CandySocials:              genCandySocials(),
-			WeeklyReport:              gofakeit.Bool(),
-			Configuration:             genConfiguration(conn),
-			OrgUsage:                  genOrgUsage(Id, conn),
-			NoRegularDashboard:        gofakeit.Bool(),
-			NoDashActionBtns:          gofakeit.Bool(),
-			NotesEnabled:              gofakeit.Bool(),
-			EnableSimpleEEOC:          gofakeit.Bool(),
-			IsTrialExpired:            gofakeit.Bool(),
-			EnableFlexibleCandySocial: gofakeit.Bool(),
-			SessionExpireInMins:       1440,
-			MFAType:                   genMFAType(),
-			IsOrgInfoVerified:         gofakeit.Bool(),
-			NoDuplicateWindow:         180,
-			LiveRoomWorkspaceImages:   genLiveRoomWorkspaceImages(),
-			EnableLeverIntegration:    gofakeit.Bool(),
-		}
-		// If org is a super org, add `subOrgs` field
-		if org.IsSuperOrg {
-			org.SubOrgs = genSubOrgs(subOrgs)
-		}
-		orgs = append(orgs, org)
-	}
-	return orgs
-}
-
-func genConfiguration(conn comm.Connectioner) primitive.ObjectID {
-	configs := conn.Coll(orgconfig.Name).Data().(orgconfig.Data)
-	keys := make([]primitive.ObjectID, 0, len(configs))
-	for objectID := range configs {
-		keys = append(keys, objectID)
-	}
-	index := rand.Intn(len(keys))
-	return configs[keys[index]].Id
-}
-
-func genOrgUsage(id int32, conn comm.Connectioner) primitive.ObjectID {
-	usages := conn.Coll(orgusage.Name).Data().(orgusage.Data)
-	for objectID, usage := range usages {
-		if usage.Organization == id {
-			return objectID
-		}
-	}
-	log.Fatal("No org usage found matching the organization with ID ", id)
-	return primitive.NilObjectID
-}
-
-func genMFAType() string {
-	index := rand.Intn(len(mFATypes))
-	return mFATypes[index]
-}
-
-func genLiveRoomWorkspaceImages() int32 {
-	return rand.Int31n(4)
-}
-
-// Populates the database with `count` random orgs
-func (c Collection) Populate(conn comm.Connectioner) {
-	// Create the collection
-	collection := comm.CreateCollection(Name, conn)
-	// Get pre-generation info
-	orgs := c.composeOrgs(conn)
-	_, err := collection.InsertMany(*conn.Ctx(), orgs)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-// Populates random orgs containing preparatory organization data in map
-func (c Collection) Prepopulate() {
-	// Generate and insert partial data
-	for i := int32(1); i <= c.count; i++ {
-		isSuperOrg := gofakeit.Bool()
-		isSubOrg := !isSuperOrg
-		org := Organization{
-			Id:         i,
-			IsSuperOrg: isSuperOrg,
-			IsSubOrg:   isSubOrg,
-		}
-		c.data[i] = org
-	}
-}
-
-// Gets a slice of all orgs that are sub orgs
-func getSubOrgs(orgs Data) []int32 {
-	var subOrgs []int32
-	for _, org := range orgs {
-		if org.IsSubOrg {
-			subOrgs = append(subOrgs, org.Id)
-		}
-	}
-	return subOrgs
 }

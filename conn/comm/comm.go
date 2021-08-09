@@ -11,14 +11,10 @@ type Connectioner interface {
 	New(client *mongo.Client, ctx context.Context)
 	DB() *mongo.Database
 	Ctx() *context.Context
-	Coll(string) Collectioner
 }
 
 type Collectioner interface {
-	Count() int32
-	Data() interface{}
-	Populate(conn Connectioner)
-	Prepopulate()
+	Mask()
 }
 
 // Creates a collection

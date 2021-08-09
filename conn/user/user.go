@@ -3,54 +3,33 @@ package user
 import (
 	"log"
 	"math/rand"
-	"strings"
-	"time"
 
 	"github.com/JRagone/mongo-data-gen/conn/comm"
 	"github.com/brianvoe/gofakeit/v6"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Collection struct {
-	count int32
-	data  Data
+	conn comm.Connectioner
+	coll *mongo.Collection
 }
 
-type Data map[int32]User
-
 type User struct {
-	Id               int32        `bson:"_id"`
-	IsClosed         bool         `bson:"isClosed"`
-	DisplayName      string       `bson:"displayName"`
-	Provider         string       `bson:"provider"`
-	ProviderID       string       `bson:"providerId"`
-	PJoinDate        time.Time    `bson:"pJoinDate"`
-	PRepoCount       int32        `bson:"pRepoCount"`
-	LoginCount       int32        `bson:"loginCount"`
-	Team             interface{}  `bson:"team,omitempty"`
-	Email            string       `bson:"email"`
-	PhoneNumber      string       `bson:"phoneNumber"`
-	Portfolio        string       `bson:"portfolio"`
-	Photo            string       `bson:"photo,omitempty"`
-	PhotoUploaded    bool         `bson:"photoUploaded"`
-	NameProvided     bool         `bson:"nameProvided"`
-	EmailProvided    bool         `bson:"emailProvided"`
-	ResumeURL        string       `bson:"resumeURL"`
-	Title            string       `bson:"jobTitle"`
-	Gender           string       `bson:"gender"`
-	Experience       []Experience `bson:"experience"`
-	Education        []Education  `bson:"education"`
-	Skills           []Skill      `bson:"skills"`
-	ProfileURL       string       `bson:"profileUrl"`
-	SignupSource     string       `bson:"signupSource"`
-	IsEmailVerified  bool         `bson:"isEmailVerified"`
-	Role             string       `bson:"role"`
-	Position         string       `bson:"position"`
-	IsAdmin          bool         `bson:"isAdmin"`
-	IsDevAdmin       bool         `bson:"IsDevAdmin"`
-	IsOrgsManager    bool         `bson:"IsOrgsManager"`
-	ManagingOrgs     []int32      `bson:"managingOrgs"`
-	NoManageOrgsPage bool         `bson:"noManageOrgsPage"`
+	Id          int32        `bson:"_id,omitempty"`
+	DisplayName string       `bson:"displayName"`
+	Email       string       `bson:"email"`
+	PhoneNumber string       `bson:"phoneNumber"`
+	Portfolio   string       `bson:"portfolio"`
+	Photo       string       `bson:"photo,omitempty"`
+	ResumeURL   string       `bson:"resumeURL"`
+	Title       string       `bson:"jobTitle"`
+	Gender      string       `bson:"gender"`
+	Experience  []Experience `bson:"experience"`
+	Education   []Education  `bson:"education"`
+	Skills      []Skill      `bson:"skills"`
+	ProfileURL  string       `bson:"profileUrl"`
 }
 
 type Experience struct {
@@ -79,104 +58,54 @@ type Skill struct {
 
 const Name = "UserCollection"
 
-var providers = [...]string{"filtered", "github", "slack", "linkedin", "bitbucket"}
-var signupSources = [...]string{"candidate-app", "interview-room"}
-var roles = [...]string{"recruiter", "candidate"}
-
-func New(count int32) *Collection {
+func New(conn comm.Connectioner) *Collection {
 	return &Collection{
-		count: count,
-		data:  make(Data),
+		conn: conn,
+		coll: conn.DB().Collection(Name),
 	}
 }
 
-func (c Collection) Count() int32 {
-	return c.count
-}
-
-func (c Collection) Data() interface{} {
-	return c.data
-}
-
-// Populates `UserCollection` with `count` random users
-func (c Collection) Populate(conn comm.Connectioner) {
-	// Create collection
-	collection := comm.CreateCollection(Name, conn)
-
-	var users []interface{}
-	// Generate and insert data
-	for Id := range c.data {
-		email := gofakeit.Email()
-		nameProvided := gofakeit.Bool()
-		photoUploaded := gofakeit.Bool()
-		role := genRole()
-		user := User{
-			Id:          Id,
-			IsClosed:    gofakeit.Bool(),
-			DisplayName: genDisplayName(nameProvided, email),
-			Provider:    genProvider(),
-			ProviderID:  gofakeit.UUID(),
-			PJoinDate:   genPJoinDate(),
-			PRepoCount:  int32(gofakeit.Float32Range(0, 50)),
-			LoginCount:  int32(gofakeit.Float32Range(0, 1000)),
-			// TODO: Team
-			Email:         email,
-			PhoneNumber:   genPhoneNumber(),
-			Portfolio:     gofakeit.URL(),
-			Photo:         genPhoto(photoUploaded),
-			PhotoUploaded: photoUploaded,
-			NameProvided:  nameProvided,
-			EmailProvided: true,
-			ResumeURL:     "https://ucarecdn.com/41db4370-b26f-4c8c-b912-bcb96dcece65/",
-			Title:         gofakeit.JobTitle(),
-			Gender:        genGender(),
-			Experience:    genExperience(),
-			Education:     genEducation(),
-			Skills:        genSkills(),
-			ProfileURL:    genProfileURL(),
-			SignupSource:  genSignupSource(),
-			Role:          role,
-			IsAdmin:       false,
-			IsDevAdmin:    false,
-			IsOrgsManager: gofakeit.Bool(),
-		}
-		if role == "recruiter" {
-			user.Position = gofakeit.JobTitle()
-			user.IsOrgsManager = gofakeit.Bool()
-		}
-		users = append(users, user)
-	}
-	_, err := collection.InsertMany(*conn.Ctx(), users)
+func (c Collection) Mask() {
+	cursor, err := c.coll.Find(*c.conn.Ctx(), bson.M{})
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer cursor.Close(*c.conn.Ctx())
+	for cursor.Next(*c.conn.Ctx()) {
+		var org User
+		if err = cursor.Decode(&org); err != nil {
+			log.Fatal(err)
+		}
+		_, err := c.coll.UpdateByID(*c.conn.Ctx(), org.Id, bson.D{{
+			Key: "$set", Value: &User{
+				DisplayName: genDisplayName(10),
+				Email:       gofakeit.Email(),
+				PhoneNumber: genPhoneNumber(),
+				Portfolio:   gofakeit.URL(),
+				Photo:       genPhoto(true),
+				ResumeURL:   "https://ucarecdn.com/41db4370-b26f-4c8c-b912-bcb96dcece65/",
+				Title:       gofakeit.JobTitle(),
+				Gender:      genGender(),
+				Experience:  genExperience(),
+				Education:   genEducation(),
+				Skills:      genSkills(),
+				ProfileURL:  genProfileURL(),
+			},
+		}})
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 }
 
-func genDisplayName(nameProvided bool, email string) string {
-	if nameProvided {
-		return gofakeit.Name()
+// Generate full name with 1 in `nameProvidedChance` odds of it being a
+// username
+func genDisplayName(nameProvidedChance int) string {
+	randNum := rand.Intn(nameProvidedChance)
+	if randNum%nameProvidedChance == 0 {
+		return gofakeit.Username()
 	}
-	at := strings.LastIndex(email, "@")
-	if at >= 0 {
-		name := email[:at]
-		return name
-	} else {
-		log.Fatal("Email ", email, " is invalid")
-		return ""
-	}
-}
-
-func genProvider() string {
-	index := rand.Intn(len(providers))
-	return providers[index]
-}
-
-func genPJoinDate() time.Time {
-	newYork, err := time.LoadLocation("America/New_York")
-	if err != nil {
-		log.Fatal(err)
-	}
-	return gofakeit.DateRange(time.Date(2017, 1, 1, 1, 1, 1, 1, newYork), time.Now())
+	return gofakeit.Name()
 }
 
 func genPhoneNumber() string {
@@ -246,24 +175,4 @@ func genSkills() []Skill {
 
 func genProfileURL() string {
 	return "https://github.com/" + gofakeit.Username()
-}
-
-func genSignupSource() string {
-	index := rand.Intn(len(signupSources))
-	return signupSources[index]
-}
-
-func genRole() string {
-	index := rand.Intn(len(roles))
-	return roles[index]
-}
-
-func (c Collection) Prepopulate() {
-	// Generate and insert partial data
-	for i := int32(0); i < c.count; i++ {
-		user := User{
-			Id: i,
-		}
-		c.data[i] = user
-	}
 }
