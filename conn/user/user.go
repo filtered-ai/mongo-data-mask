@@ -8,28 +8,26 @@ import (
 	"github.com/brianvoe/gofakeit/v6"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Collection struct {
-	conn comm.Connectioner
-	coll *mongo.Collection
+	comm.Collection
 }
 
 type User struct {
-	Id          int32        `bson:"_id,omitempty"`
-	DisplayName string       `bson:"displayName"`
-	Email       string       `bson:"email"`
-	PhoneNumber string       `bson:"phoneNumber"`
-	Portfolio   string       `bson:"portfolio"`
-	Photo       string       `bson:"photo,omitempty"`
-	ResumeURL   string       `bson:"resumeURL"`
-	Title       string       `bson:"jobTitle"`
-	Gender      string       `bson:"gender"`
-	Experience  []Experience `bson:"experience"`
-	Education   []Education  `bson:"education"`
-	Skills      []Skill      `bson:"skills"`
-	ProfileURL  string       `bson:"profileUrl"`
+	comm.Document `bson:"inline"`
+	DisplayName   string       `bson:"displayName"`
+	Email         string       `bson:"email"`
+	PhoneNumber   string       `bson:"phoneNumber"`
+	Portfolio     string       `bson:"portfolio"`
+	Photo         string       `bson:"photo,omitempty"`
+	ResumeURL     string       `bson:"resumeURL"`
+	Title         string       `bson:"jobTitle"`
+	Gender        string       `bson:"gender"`
+	Experience    []Experience `bson:"experience"`
+	Education     []Education  `bson:"education"`
+	Skills        []Skill      `bson:"skills"`
+	ProfileURL    string       `bson:"profileUrl"`
 }
 
 type Experience struct {
@@ -60,41 +58,32 @@ const Name = "UserCollection"
 
 func New(conn comm.Connectioner) *Collection {
 	return &Collection{
-		conn: conn,
-		coll: conn.DB().Collection(Name),
+		comm.Collection{
+			Conn: conn,
+			Coll: conn.DB().Collection(Name),
+		},
 	}
 }
 
-func (c Collection) Mask() {
-	cursor, err := c.coll.Find(*c.conn.Ctx(), bson.M{})
+func (c Collection) Mask(doc comm.Document) {
+	_, err := c.Coll.UpdateByID(*c.Conn.Ctx(), doc.Id, bson.D{{
+		Key: "$set", Value: &User{
+			DisplayName: genDisplayName(10),
+			Email:       gofakeit.Email(),
+			PhoneNumber: genPhoneNumber(),
+			Portfolio:   gofakeit.URL(),
+			Photo:       genPhoto(true),
+			ResumeURL:   "https://ucarecdn.com/41db4370-b26f-4c8c-b912-bcb96dcece65/",
+			Title:       gofakeit.JobTitle(),
+			Gender:      genGender(),
+			Experience:  genExperience(),
+			Education:   genEducation(),
+			Skills:      genSkills(),
+			ProfileURL:  genProfileURL(),
+		},
+	}})
 	if err != nil {
 		log.Fatal(err)
-	}
-	defer cursor.Close(*c.conn.Ctx())
-	for cursor.Next(*c.conn.Ctx()) {
-		var org User
-		if err = cursor.Decode(&org); err != nil {
-			log.Fatal(err)
-		}
-		_, err := c.coll.UpdateByID(*c.conn.Ctx(), org.Id, bson.D{{
-			Key: "$set", Value: &User{
-				DisplayName: genDisplayName(10),
-				Email:       gofakeit.Email(),
-				PhoneNumber: genPhoneNumber(),
-				Portfolio:   gofakeit.URL(),
-				Photo:       genPhoto(true),
-				ResumeURL:   "https://ucarecdn.com/41db4370-b26f-4c8c-b912-bcb96dcece65/",
-				Title:       gofakeit.JobTitle(),
-				Gender:      genGender(),
-				Experience:  genExperience(),
-				Education:   genEducation(),
-				Skills:      genSkills(),
-				ProfileURL:  genProfileURL(),
-			},
-		}})
-		if err != nil {
-			log.Fatal(err)
-		}
 	}
 }
 

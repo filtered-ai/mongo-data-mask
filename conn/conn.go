@@ -37,7 +37,7 @@ func (c *Connection) Ctx() *context.Context {
 func (c *Connection) Mask() {
 	for name, coll := range c.coll {
 		start := time.Now()
-		coll.Mask()
+		coll.IterateDocs(coll.Mask)
 		elapsed := time.Since(start)
 		log.Println(name, "masking took", elapsed)
 	}

@@ -3,7 +3,9 @@ package comm
 import (
 	"context"
 	"log"
+	"sync"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -14,10 +16,41 @@ type Connectioner interface {
 }
 
 type Collectioner interface {
-	Mask()
+	IterateDocs(handleDoc func(doc Document))
+	Mask(doc Document)
 }
 
-// Creates a collection
+type Collection struct {
+	Conn Connectioner
+	Coll *mongo.Collection
+}
+
+type Document struct {
+	Id int32 `bson:"_id,omitempty"`
+}
+
+func (c Collection) IterateDocs(handleDoc func(doc Document)) {
+	cursor, err := c.Coll.Find(*c.Conn.Ctx(), bson.M{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cursor.Close(*c.Conn.Ctx())
+	var wg sync.WaitGroup
+	for cursor.Next(*c.Conn.Ctx()) {
+		var doc Document
+		if err = cursor.Decode(&doc); err != nil {
+			log.Fatal(err)
+		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			handleDoc(doc)
+		}()
+	}
+	wg.Wait()
+}
+
+// Create a collection
 func CreateCollection(collection string, conn Connectioner) *mongo.Collection {
 	err := conn.DB().CreateCollection(*conn.Ctx(), collection)
 	if err != nil {
