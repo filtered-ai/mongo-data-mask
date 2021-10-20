@@ -1,6 +1,6 @@
-# MongoDB Data Generator
+# MongoDB Data Masker
 
-Filtered's in-house data generation tool for development environments.
+Filtered's data masking tool for development environments.
 
 ## Generate Data
 

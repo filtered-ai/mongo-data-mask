@@ -14,7 +14,7 @@ type Collection struct {
 }
 
 type Organization struct {
-	Id                  int32               `bson:"_id,omitempty"`
+	comm.Document       `bson:"inline"`
 	Name                string              `bson:"name,omitempty"`
 	Location            string              `bson:"location,omitempty"`
 	LogoURL             string              `bson:"logoURL,omitempty"`
