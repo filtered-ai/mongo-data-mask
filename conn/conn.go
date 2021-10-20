@@ -26,7 +26,7 @@ func (c *Connection) New(client *mongo.Client, ctx context.Context) {
 	c.coll[user.Name] = user.New(c)
 }
 
-func (c *Connection) DB() *mongo.Database {
+func (c *Connection) Db() *mongo.Database {
 	return c.db
 }
 

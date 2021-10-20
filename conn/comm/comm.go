@@ -11,7 +11,7 @@ import (
 
 type Connectioner interface {
 	New(client *mongo.Client, ctx context.Context)
-	DB() *mongo.Database
+	Db() *mongo.Database
 	Ctx() *context.Context
 }
 
@@ -52,9 +52,9 @@ func (c Collection) IterateDocs(handleDoc func(doc Document)) {
 
 // Create a collection
 func CreateCollection(collection string, conn Connectioner) *mongo.Collection {
-	err := conn.DB().CreateCollection(*conn.Ctx(), collection)
+	err := conn.Db().CreateCollection(*conn.Ctx(), collection)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return conn.DB().Collection(collection)
+	return conn.Db().Collection(collection)
 }

@@ -39,7 +39,7 @@ func New(conn comm.Connectioner) *Collection {
 	return &Collection{
 		comm.Collection{
 			Conn: conn,
-			Coll: conn.DB().Collection(Name),
+			Coll: conn.Db().Collection(Name),
 		},
 	}
 }
