@@ -1,4 +1,4 @@
-module github.com/JRagone/mongodatamask
+module github.com/filtered-ai/mongodatamask
 
 go 1.16
 
