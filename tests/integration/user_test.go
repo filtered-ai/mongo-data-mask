@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JRagone/mongo-data-gen/conn"
-	"github.com/JRagone/mongo-data-gen/conn/user"
+	"github.com/JRagone/mongodatamask/internal/conn"
+	"github.com/JRagone/mongodatamask/internal/conn/user"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"

@@ -5,9 +5,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/JRagone/mongo-data-gen/conn/comm"
-	"github.com/JRagone/mongo-data-gen/conn/org"
-	"github.com/JRagone/mongo-data-gen/conn/user"
+	"github.com/JRagone/mongodatamask/internal/conn/comm"
+	"github.com/JRagone/mongodatamask/internal/conn/org"
+	"github.com/JRagone/mongodatamask/internal/conn/user"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 

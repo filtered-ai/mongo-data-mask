@@ -4,7 +4,7 @@ import (
 	"log"
 	"math/rand"
 
-	"github.com/JRagone/mongo-data-gen/conn/comm"
+	"github.com/JRagone/mongodatamask/internal/conn/comm"
 	"github.com/brianvoe/gofakeit/v6"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
