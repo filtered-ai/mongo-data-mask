@@ -1,31 +1,20 @@
-package main
+package mongodatamask
 
 import (
 	"context"
 	"log"
-	"os"
-	"strconv"
 	"time"
 
-	"github.com/JRagone/mongo-data-gen/conn"
+	"github.com/JRagone/mongodatamask/internal/conn"
 	"github.com/brianvoe/gofakeit/v6"
-	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func main() {
-	// Load env variables
-	godotenv.Load()
-
-	seed, err := strconv.ParseInt(os.Getenv("SEED"), 10, 64)
-	if err != nil {
-		log.Fatal(err)
-	}
+func Mask(seed int64, mongoURI string) {
+	// Seed fake data generator
 	gofakeit.Seed(seed)
-
 	// Connect to cluster
-	mongoURI := os.Getenv("MONGO_URI")
 	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURI))
 	if err != nil {
 		log.Fatal(err)
@@ -38,7 +27,7 @@ func main() {
 	// Cancel context and disconnect last
 	defer cancel()
 	defer client.Disconnect(ctx)
-
+	//
 	c := conn.Connection{}
 	c.New(client, ctx)
 	c.Mask()

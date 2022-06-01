@@ -1,4 +1,4 @@
-module github.com/JRagone/mongo-data-gen
+module github.com/JRagone/mongodatamask
 
 go 1.16
 
