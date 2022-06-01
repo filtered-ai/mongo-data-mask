@@ -26,8 +26,8 @@ type User struct {
 	Gender        string       `bson:"gender"`
 	Experience    []Experience `bson:"experience"`
 	Education     []Education  `bson:"education"`
-	Skills        []Skill      `bson:"skills"`
-	ProfileURL    string       `bson:"profileUrl"`
+	// Skills        []Skill      `bson:"skills"`
+	ProfileURL string `bson:"profileUrl"`
 }
 
 type Experience struct {
@@ -78,8 +78,8 @@ func (c Collection) Mask(doc comm.Document) {
 			Gender:      genGender(),
 			Experience:  genExperience(),
 			Education:   genEducation(),
-			Skills:      genSkills(),
-			ProfileURL:  genProfileURL(),
+			// Skills:      genSkills(),
+			ProfileURL: genProfileURL(),
 		},
 	}})
 	if err != nil {
