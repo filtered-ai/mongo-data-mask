@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/brianvoe/gofakeit/v6"
-	"github.com/filtered-ai/mongodatamask/internal/conn"
+	"github.com/filtered-ai/mongo-data-mask/internal/conn"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )

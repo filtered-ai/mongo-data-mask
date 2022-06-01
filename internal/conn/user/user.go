@@ -5,7 +5,7 @@ import (
 	"math/rand"
 
 	"github.com/brianvoe/gofakeit/v6"
-	"github.com/filtered-ai/mongodatamask/internal/conn/comm"
+	"github.com/filtered-ai/mongo-data-mask/internal/conn/comm"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )

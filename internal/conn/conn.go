@@ -5,9 +5,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/filtered-ai/mongodatamask/internal/conn/comm"
-	"github.com/filtered-ai/mongodatamask/internal/conn/org"
-	"github.com/filtered-ai/mongodatamask/internal/conn/user"
+	"github.com/filtered-ai/mongo-data-mask/internal/conn/comm"
+	"github.com/filtered-ai/mongo-data-mask/internal/conn/org"
+	"github.com/filtered-ai/mongo-data-mask/internal/conn/user"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 

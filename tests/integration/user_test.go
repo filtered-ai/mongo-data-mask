@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/filtered-ai/mongodatamask/internal/conn"
-	"github.com/filtered-ai/mongodatamask/internal/conn/user"
+	"github.com/filtered-ai/mongo-data-mask/internal/conn"
+	"github.com/filtered-ai/mongo-data-mask/internal/conn/user"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"

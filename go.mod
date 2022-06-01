@@ -1,4 +1,4 @@
-module github.com/filtered-ai/mongodatamask
+module github.com/filtered-ai/mongo-data-mask
 
 go 1.16
 
