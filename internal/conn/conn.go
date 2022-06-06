@@ -17,9 +17,9 @@ type Connection struct {
 	coll map[string]comm.Collectioner
 }
 
-func (c *Connection) New(client *mongo.Client, ctx context.Context) {
+func (c *Connection) New(client *mongo.Client, database string, ctx context.Context) {
 	// Get database
-	c.db = client.Database("local_temp")
+	c.db = client.Database(database)
 	c.ctx = ctx
 	c.coll = make(map[string]comm.Collectioner)
 	c.coll[org.Name] = org.New(c)

@@ -10,7 +10,7 @@ import (
 )
 
 type Connectioner interface {
-	New(client *mongo.Client, ctx context.Context)
+	New(client *mongo.Client, database string, ctx context.Context)
 	Db() *mongo.Database
 	Ctx() *context.Context
 }
