@@ -9,6 +9,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+const FilteredOrgId = 50
+
 type Connectioner interface {
 	New(client *mongo.Client, database string, ctx context.Context)
 	Db() *mongo.Database
@@ -26,7 +28,7 @@ type Collection struct {
 }
 
 type Document struct {
-	Id int32 `bson:"_id,omitempty"`
+	Mixed bson.M `bson:",inline"`
 }
 
 func (c Collection) IterateDocs(handleDoc func(doc Document)) {

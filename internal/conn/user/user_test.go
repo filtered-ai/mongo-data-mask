@@ -83,16 +83,6 @@ func TestGenEducation(t *testing.T) {
 	}
 }
 
-// Test for skill name from genSkills
-func TestSkills(t *testing.T) {
-	skills := genSkills()
-	for _, skill := range skills {
-		if skill.SkillName == "" {
-			t.Errorf("Skill %+v\n specified no skill name", skill)
-		}
-	}
-}
-
 // Test that profile URL from genProfileURL is a URL
 func TestGenProfileURL(t *testing.T) {
 	profileURL := genProfileURL()

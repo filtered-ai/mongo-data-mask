@@ -1,4 +1,4 @@
-package mongodatamask
+package main
 
 import (
 	"context"

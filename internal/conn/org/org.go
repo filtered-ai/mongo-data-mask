@@ -45,8 +45,12 @@ func New(conn comm.Connectioner) *Collection {
 }
 
 func (c Collection) Mask(doc comm.Document) {
+	id := doc.Mixed["_id"].(int32)
+	if id == comm.FilteredOrgId {
+		return
+	}
 	companyName := gofakeit.Company()
-	_, err := c.Coll.UpdateByID(*c.Conn.Ctx(), doc.Id, bson.D{{
+	_, err := c.Coll.UpdateByID(*c.Conn.Ctx(), id, bson.D{{
 		Key: "$set", Value: &Organization{
 			Name:            companyName,
 			Location:        gofakeit.City() + ", " + gofakeit.State(),

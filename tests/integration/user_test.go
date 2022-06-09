@@ -12,14 +12,19 @@ import (
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 )
 
 func TestNew(t *testing.T) {
 	// Load env variables
 	godotenv.Load()
 	// Connect to cluster
-	mongoURI := os.Getenv("MONGO_URI")
-	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURI))
+	mongoUri := os.Getenv("MONGO_URI")
+	cs, err := connstring.ParseAndValidate(mongoUri)
+	if err != nil {
+		log.Fatal(err)
+	}
+	client, err := mongo.NewClient(options.Client().ApplyURI(mongoUri))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -33,6 +38,6 @@ func TestNew(t *testing.T) {
 	defer client.Disconnect(ctx)
 
 	c := conn.Connection{}
-	c.New(client, ctx)
+	c.New(client, cs.Database, ctx)
 	_ = user.New(&c)
 }

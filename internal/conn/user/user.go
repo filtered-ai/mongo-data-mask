@@ -47,13 +47,6 @@ type Education struct {
 	EndDate   string             `bson:"endDate,omitempty"`
 }
 
-type Skill struct {
-	Id                primitive.ObjectID `bson:"_id"`
-	SkillName         string             `bson:"skillName"`
-	IsVerified        bool               `bson:"isVerified"`
-	IsFromDataService bool               `bson:"isFromDataService"`
-}
-
 const Name = "UserCollection"
 
 func New(conn comm.Connectioner) *Collection {
@@ -66,7 +59,10 @@ func New(conn comm.Connectioner) *Collection {
 }
 
 func (c Collection) Mask(doc comm.Document) {
-	_, err := c.Coll.UpdateByID(*c.Conn.Ctx(), doc.Id, bson.D{{
+	if doc.Mixed["organization"] != nil && doc.Mixed["organization"].(int32) == comm.FilteredOrgId {
+		return
+	}
+	_, err := c.Coll.UpdateByID(*c.Conn.Ctx(), doc.Mixed["_id"].(int32), bson.D{{
 		Key: "$set", Value: &User{
 			DisplayName: genDisplayName(10),
 			Email:       gofakeit.Email(),
@@ -78,8 +74,7 @@ func (c Collection) Mask(doc comm.Document) {
 			Gender:      genGender(),
 			Experience:  genExperience(),
 			Education:   genEducation(),
-			// Skills:      genSkills(),
-			ProfileURL: genProfileURL(),
+			ProfileURL:  genProfileURL(),
 		},
 	}})
 	if err != nil {
@@ -97,10 +92,12 @@ func genDisplayName(nameProvidedChance int) string {
 	return gofakeit.Name()
 }
 
+// Generate phone number with 'tel:+1' prefix
 func genPhoneNumber() string {
 	return "tel:+1" + gofakeit.Phone()
 }
 
+// Generate a photo URL by providing a default photo
 func genPhoto(photoUploaded bool) string {
 	if photoUploaded {
 		return "https://ucarecdn.com/ea61ff48-1605-4b48-950c-358232c4fc8d/"
@@ -108,6 +105,7 @@ func genPhoto(photoUploaded bool) string {
 	return ""
 }
 
+// Generate a random gender
 func genGender() string {
 	gender := rand.Intn(3)
 	if gender == 0 {
@@ -118,6 +116,7 @@ func genGender() string {
 	return ""
 }
 
+// Generate an array of random experiences
 func genExperience() []Experience {
 	experiences := []Experience{}
 	numExperiences := rand.Intn(10)
@@ -132,6 +131,7 @@ func genExperience() []Experience {
 	return experiences
 }
 
+// Generate an array of random educations
 func genEducation() []Education {
 	educations := []Education{}
 	numEducations := rand.Intn(5)
@@ -146,22 +146,7 @@ func genEducation() []Education {
 	return educations
 }
 
-func genSkills() []Skill {
-	skills := []Skill{}
-	numSkills := rand.Intn(50)
-	for i := 0; i < numSkills; i++ {
-		objectID := primitive.NewObjectID()
-		skill := Skill{
-			Id:                objectID,
-			SkillName:         gofakeit.HackerVerb(),
-			IsVerified:        gofakeit.Bool(),
-			IsFromDataService: gofakeit.Bool(),
-		}
-		skills = append(skills, skill)
-	}
-	return skills
-}
-
+// Generate a random profile URL
 func genProfileURL() string {
 	return "https://github.com/" + gofakeit.Username()
 }
