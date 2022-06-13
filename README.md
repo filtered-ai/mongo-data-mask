@@ -1,9 +1,18 @@
 # MongoDB Data Masker
 
-Filtered's data masking tool for development environments.
+This project masks MongoDB data exported to JSON by `mongoexport`.
 
-## Generate Data
+## Local development
+
+Install dependencies and start the program.
 
 ```sh
-go run .
+yarn install
+yarn start
+```
+
+## Publish
+
+```sh
+yarn pub
 ```
