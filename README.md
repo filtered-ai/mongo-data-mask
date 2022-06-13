@@ -4,14 +4,15 @@ This project masks MongoDB data exported to JSON by `mongoexport`.
 
 ## Local development
 
-Install dependencies and start the program.
+Install dependencies.
 
 ```sh
 yarn install
-yarn start
 ```
 
 ## Publish
+
+Publish as a private package.
 
 ```sh
 yarn pub
