@@ -1,6 +1,6 @@
 {
-  "name": "@filtered-ai-engineering/mongodb-data-masker",
-  "version": "0.1.13",
+  "name": "@filtered/mongodb-data-masker",
+  "version": "0.1.14",
   "description": "MongoDB data masker",
   "main": "dist/index.js",
   "author": "Filtered",
