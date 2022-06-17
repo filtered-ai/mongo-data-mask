@@ -12,17 +12,16 @@ import UserCollection from "./collection/user";
 interface MaskableCollectionObjs {
   [key: string]: {
     class: new (dataFile: string) => Collection;
-    masked: boolean
-  }
+    masked: boolean;
+  };
 }
 
 /**
  * Data masker
  */
-class Masker {
-  private readonly dataDir: string;
+export class Masker {
   // Add new maskable collections here
-  private readonly maskableCollectionObjs: MaskableCollectionObjs = {
+  public static readonly maskableCollectionObjs: MaskableCollectionObjs = {
     [UserCollection.collName]: { class: UserCollection, masked: false },
     [OrganizationCollection.collName]: {
       class: OrganizationCollection,
@@ -41,6 +40,7 @@ class Masker {
       masked: false,
     },
   };
+  private readonly dataDir: string;
 
   /**
    * Construct a new Masker.
@@ -55,17 +55,13 @@ class Masker {
    */
   public async mask() {
     // Create all maskable collections if their JSON file exists
-    for (const collName in this.maskableCollectionObjs) {
+    for (const collName in Masker.maskableCollectionObjs) {
       const filename = collName;
-      const filePath = path.join(
-        this.dataDir,
-        `${filename}.json`
-      );
+      const filePath = path.join(this.dataDir, `${filename}.json`);
       if (!fs.existsSync(filePath)) {
-        Logger.error(`${filename} not found.`);
-        continue;
+        throw new Error(`${filename} not found.`);
       }
-      new this.maskableCollectionObjs[collName].class(filePath);
+      new Masker.maskableCollectionObjs[collName].class(filePath);
     }
     // Send event to start masking all collections
     collectionEvents.emit("startMask");
@@ -84,12 +80,16 @@ class Masker {
   private allCollectionsMasked(): Promise<void> {
     return new Promise((resolve, reject) => {
       collectionEvents.on("collectionMasked", (collName: string) => {
-        if (!(collName in this.maskableCollectionObjs)) {
+        if (!(collName in Masker.maskableCollectionObjs)) {
           reject(`[ERROR] Unknown collection ${collName} masked.`);
         }
-        this.maskableCollectionObjs[collName].masked = true;
+        Masker.maskableCollectionObjs[collName].masked = true;
         // If all collections are masked, resolve
-        if(Object.values(this.maskableCollectionObjs).every((coll) => coll.masked)) {
+        if (
+          Object.values(Masker.maskableCollectionObjs).every(
+            (coll) => coll.masked
+          )
+        ) {
           resolve();
         }
       });
