@@ -59,7 +59,7 @@ export default class UserCollection extends Collection {
     }
     user.displayName = this.genDisplayName(10);
     user.email = this.genEmail(user.displayName);
-    user.phoneNumber = faker.phone.phoneNumber("tel:+1##########");
+    user.phoneNumber = faker.phone.number("tel:+1##########");
     user.portfolio = faker.internet.url();
     user.photo = faker.image.avatar();
     user.resumeURL =
