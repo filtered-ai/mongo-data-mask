@@ -24,6 +24,7 @@ export default class InterviewCollection extends Collection {
 
   protected genMaskedData(data: string): string {
     const iv = <Interview>JSON.parse(data);
+    // Add Filtered interview Id to set
     if (iv.organization === this.filteredOrgId) {
       InterviewCollection.filteredIvQuestions = new Set([
         ...iv.questions,

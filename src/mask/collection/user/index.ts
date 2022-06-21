@@ -68,7 +68,7 @@ export default class UserCollection extends Collection {
     user.gender = this.genGender();
     user.experience = this.maskExperience(user.experience);
     user.education = this.maskEducation(user.education);
-    user.profileURL = `https://github.com/${faker.internet.userName}`;
+    user.profileURL = `https://github.com/${faker.internet.userName()}`;
     return JSON.stringify(user);
   }
 

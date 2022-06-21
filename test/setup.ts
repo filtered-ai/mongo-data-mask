@@ -7,10 +7,10 @@ export default function setup() {
   if (!existsSync(exportDirPath)) {
     mkdirSync(exportDirPath);
   }
-  for (const collName of Object.keys(Masker.maskableCollectionObjs)) {
+  for (const collName in Masker.maskableCollectionObjs) {
     const filePath = join(exportDirPath, `${collName}.json`);
     if (!existsSync(filePath)) {
-      writeFileSync(filePath, "{}");
+      writeFileSync(filePath, "[{}]");
     }
   }
 }
