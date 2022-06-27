@@ -1,9 +1,43 @@
 # MongoDB Data Masker
 
-Filtered's data masking tool for development environments.
+This package masks MongoDB data exported to JSON by `mongoexport`.
 
-## Generate Data
+## Usage
+
+### ES modules
+
+```ts
+import { mask } from '@filtered/mongodb-data-masker';
+```
+
+### CommonJS
+
+```js
+const { mask } = require('@filtered/mongodb-data-masker');
+```
+
+## Local development
+
+Install dependencies.
 
 ```sh
-go run .
+yarn install
+```
+
+### Test
+
+Put test data generated with `mongoexport --jsonArray...` in `export/`.
+
+Tests are using [Jest](https://jestjs.io/) as the testing framework.
+
+```sh
+yarn test
+```
+
+## Publish
+
+Publish as a private package.
+
+```sh
+yarn pub
 ```
