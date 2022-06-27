@@ -3,6 +3,8 @@ import JSONStream from "JSONStream";
 import { EventEmitter } from "events";
 import path from "path";
 import Logger from "../../logger";
+import { pipeline } from "stream/promises";
+import { Transform } from "stream";
 
 export const collectionEvents = new EventEmitter();
 
@@ -68,34 +70,51 @@ export default abstract class Collection {
   /**
    * Stream and mask content from the data file.
    */
-  public mask() {
+  public async mask() {
     const outFileParsedPath = path.parse(this.dataFile);
     const collName = path.parse(this.dataFile).name;
     Logger.progress(`Masking ${collName}...`);
     const start = Date.now();
-    // Use JSONstream.stringify to write a JSON array
-    const jsonWriter = JSONStream.stringify("[", ",", "]");
+    // Write masked data to a temporary file
     const outFile = path.join(
       outFileParsedPath.dir,
       `${outFileParsedPath.name}.masked${outFileParsedPath.ext}`
     );
+    /*
+      Pipeline:
+      - Read data
+      - Parse JSON
+      - Mask JSON object with transform stream
+      - Write JSON array
+      - Write masked data
+    */
+    const readStream = fs.createReadStream(this.dataFile);
+    const jsonParse = JSONStream.parse("*");
+    const genMaskedDataFunc = this.genMaskedData.bind(this);
+    const maskData = new Transform({
+      writableObjectMode: true,
+      readableObjectMode: true,
+      transform(chunk, encoding, callback) {
+        const maskedDataStr = genMaskedDataFunc(JSON.stringify(chunk));
+        callback(null, JSON.parse(maskedDataStr));
+      },
+    });
+    const jsonWrite = JSONStream.stringify("[", ",", "]");
     const writeStream = fs.createWriteStream(outFile);
-    // Pipe the JSON array to the write stream for the masked file
-    jsonWriter.pipe(writeStream);
-    fs.createReadStream(this.dataFile)
-      .pipe(JSONStream.parse("*"))
-      .on("data", (data) => {
-        jsonWriter.write(JSON.parse(this.genMaskedData(JSON.stringify(data))));
-      })
-      .on("end", () => {
-        jsonWriter.end();
-        fs.renameSync(outFile, this.dataFile);
-        const stop = Date.now();
-        Logger.success(
-          `${collName} masked in ${(stop - start) / 1000} seconds.`
-        );
-        collectionEvents.emit("collectionMasked", collName);
-      });
+    // Wait for the pipeline to finish
+    await pipeline(
+      readStream,
+      jsonParse,
+      maskData,
+      jsonWrite,
+      writeStream
+    );
+    // Replace the original file with the masked file
+    fs.renameSync(outFile, this.dataFile);
+    const stop = Date.now();
+    Logger.success(`${collName} masked in ${(stop - start) / 1000} seconds.`);
+    // Alert subscribers that the collection has been masked
+    collectionEvents.emit("collectionMasked", collName);
   }
 
   /**
