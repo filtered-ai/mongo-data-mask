@@ -59,7 +59,8 @@ export class Masker {
       const filename = collName;
       const filePath = path.join(this.dataDir, `${filename}.json`);
       if (!fs.existsSync(filePath)) {
-        throw new Error(`${filename} not found.`);
+        delete Masker.maskableCollectionObjs[collName];
+        continue;
       }
       new Masker.maskableCollectionObjs[collName].class(filePath);
     }
@@ -79,6 +80,9 @@ export class Masker {
    */
   private allCollectionsMasked(): Promise<void> {
     return new Promise((resolve, reject) => {
+      if (!Object.keys(Masker.maskableCollectionObjs).length) {
+        resolve();
+      }
       collectionEvents.on("collectionMasked", (collName: string) => {
         if (!(collName in Masker.maskableCollectionObjs)) {
           reject(`[ERROR] Unknown collection ${collName} masked.`);
