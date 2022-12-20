@@ -1,12 +1,12 @@
 {
   "name": "@filtered/mongodb-data-masker",
-  "version": "0.1.18",
+  "version": "0.1.20",
   "description": "MongoDB data masker",
   "main": "dist/index.js",
   "author": "Filtered",
   "license": "MIT",
   "engines": {
-    "node": "16.x"
+    "node": "18.x"
   },
   "files": [
     "/dist"
