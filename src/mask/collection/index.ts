@@ -1,5 +1,5 @@
 import fs from "fs";
-import JSONStream from "JSONStream";
+import JSONStream from "jsonstream";
 import { EventEmitter } from "events";
 import path from "path";
 import Logger from "../../logger";
