@@ -6,7 +6,7 @@
   "author": "Filtered",
   "license": "MIT",
   "engines": {
-    "node": "18.x"
+    "node": ">=16.0.0 <19.0.0"
   },
   "files": [
     "/dist"
